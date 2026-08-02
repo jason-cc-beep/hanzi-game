@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>汉字大冒险 - 小学语文乐园</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; font-family:"Microsoft YaHei","PingFang SC",sans-serif; }
+html,body { height:100%; }
+body {
+  min-height:100vh;
+  background: linear-gradient(160deg,#e0f7ff 0%,#fff0f6 45%,#fff7e6 100%);
+  overflow-x:hidden;
+  user-select:none;
+}
+#bgCanvas { position:fixed; inset:0; z-index:0; pointer-events:none; }
+
+#app { position:relative; z-index:1; max-width:980px; margin:0 auto; padding:16px 14px 40px; }
+.screen { display:none; animation: fadeIn .35s ease; }
+.screen.active { display:block; }
+@keyframes fadeIn { from{opacity:0; transform:translateY(14px);} to{opacity:1; transform:none;} }
+
+/* ---------- 首页 ---------- */
+.logo {
+  text-align:center; font-size:56px; font-weight:900; margin-top:34px;
+  background: linear-gradient(90deg,#ff6b6b,#ff9f43,#ffd93d,#6bcb77,#4d96ff);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  background-clip:text;
+  animation: logoBounce 2.4s ease-in-out infinite;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,.12));
+}
+@keyframes logoBounce { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-8px);} }
+.subtitle { text-align:center; font-size:19px; color:#6b7280; margin:10px 0 30px; letter-spacing:2px; }
+.mascot { text-align:center; font-size:74px; margin:8px 0 18px; animation: wiggle 2.8s ease-in-out infinite; }
+@keyframes wiggle { 0%,100%{transform:rotate(-6deg);} 50%{transform:rotate(6deg);} }
+.big-btn {
+  display:block; margin:14px auto; padding:16px 44px; font-size:26px; font-weight:bold;
+  color:#fff; background:linear-gradient(135deg,#ff6b6b,#ff9f43);
+  border:none; border-radius:60px; cursor:pointer;
+  box-shadow:0 6px 18px rgba(255,107,107,.4);
+  transition:transform .18s, box-shadow .18s;
+}
+.big-btn:hover { transform:translateY(-3px) scale(1.03); box-shadow:0 10px 26px rgba(255,107,107,.5); }
+.big-btn:active { transform:scale(.96); }
+.big-btn.gray { background:linear-gradient(135deg,#aab,#889); box-shadow:0 6px 18px rgba(136,136,136,.35); }
+.home-stats { text-align:center; margin-top:22px; font-size:20px; color:#8a5a00; }
+.home-stats b { font-size:26px; }
+.sound-toggle {
+  position:fixed; top:16px; right:18px; z-index:9;
+  width:46px; height:46px; border-radius:50%; font-size:22px; cursor:pointer;
+  background:#fff; box-shadow:0 3px 10px rgba(0,0,0,.15); border:none; line-height:46px; text-align:center;
+}
+.sound-toggle.off { filter:grayscale(1); opacity:.55; }
+
+/* ---------- 通用头部 ---------- */
+.screen-header { display:flex; align-items:center; gap:12px; margin:6px 0 18px; }
+.back-btn {
+  width:44px; height:44px; border-radius:50%; font-size:22px; cursor:pointer;
+  background:#fff; box-shadow:0 3px 10px rgba(0,0,0,.14); border:none; flex:none;
+}
+.back-btn:active { transform:scale(.92); }
+.screen-header h2 { font-size:28px; color:#333; }
+
+/* ---------- 年级选择 ---------- */
+.grade-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+.grade-card {
+  border-radius:22px; padding:26px 10px 20px; text-align:center; cursor:pointer;
+  color:#fff; box-shadow:0 6px 16px rgba(0,0,0,.14);
+  transition:transform .18s;
+}
+.grade-card:hover { transform:translateY(-5px) scale(1.04); }
+.grade-card:active { transform:scale(.95); }
+.grade-num { font-size:52px; font-weight:900; text-shadow:0 3px 6px rgba(0,0,0,.2); }
+.grade-name { font-size:20px; margin-top:6px; font-weight:bold; }
+.grade-tag { font-size:13px; opacity:.92; margin-top:4px; }
+
+/* ---------- 模式选择 ---------- */
+.mode-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.mode-card {
+  border-radius:24px; padding:24px 18px; cursor:pointer; background:#fff;
+  box-shadow:0 6px 18px rgba(0,0,0,.10); border:3px solid transparent;
+  transition:transform .18s, border-color .18s;
+  text-align:center;
+}
+.mode-card:hover { transform:translateY(-4px); border-color:#ff9f43; }
+.mode-card:active { transform:scale(.96); }
+.mode-icon { font-size:52px; }
+.mode-name { font-size:22px; font-weight:bold; color:#333; margin-top:8px; }
+.mode-desc { font-size:13.5px; color:#888; margin-top:6px; line-height:1.5; }
+
+/* ---------- 关卡选择 ---------- */
+.level-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:10px; margin-bottom:18px; }
+.level-btn {
+  aspect-ratio:1; border-radius:16px; font-size:22px; font-weight:bold; cursor:pointer;
+  background:#fff; color:#333; border:2px solid #e5e7eb; box-shadow:0 3px 8px rgba(0,0,0,.08);
+  display:flex; align-items:center; justify-content:center; position:relative;
+  transition:transform .15s;
+}
+.level-btn:hover { transform:translateY(-3px); border-color:#ff9f43; }
+.level-btn.cur { background:linear-gradient(135deg,#ff6b6b,#ff9f43); color:#fff; border-color:transparent; animation:popIn .3s ease; }
+.level-btn.cur::after { content:'▶'; position:absolute; top:-9px; right:-9px; font-size:14px; background:#fff; border-radius:50%; width:22px; height:22px; line-height:22px; box-shadow:0 2px 6px rgba(0,0,0,.2); }
+.level-btn.locked { background:#f1f2f6; color:#c0c4cc; cursor:not-allowed; }
+.level-btn.locked:hover { transform:none; border-color:#e5e7eb; }
+.level-btn .lv-star { position:absolute; top:-8px; left:-8px; font-size:15px; }
+
+/* ---------- 游戏顶部 ---------- */
+.game-top {
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  background:#fff; border-radius:60px; padding:8px 12px 8px 8px;
+  box-shadow:0 4px 14px rgba(0,0,0,.10); margin-bottom:16px;
+}
+.top-info { flex:1; display:flex; align-items:center; gap:10px; font-size:18px; font-weight:bold; color:#444; }
+.progress { background:#fff3cd; color:#b8860b; border-radius:30px; padding:4px 12px; font-size:14px; }
+.top-right { display:flex; align-items:center; gap:10px; font-size:16px; }
+.coin { background:#fff8e1; border-radius:30px; padding:4px 12px; color:#b8860b; font-weight:bold; }
+.combo { background:#ffe0e0; border-radius:30px; padding:4px 10px; color:#e53935; font-weight:bold; display:none; }
+.combo.show { display:inline-block; animation: popIn .25s ease; }
+
+/* ---------- 消消乐 ---------- */
+.match-grid { display:flex; flex-wrap:wrap; justify-content:center; gap:12px; max-width:640px; margin:0 auto; }
+.bubble {
+  width:96px; height:96px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:30px; font-weight:bold; color:#fff; cursor:pointer; position:relative;
+  box-shadow:0 6px 14px rgba(0,0,0,.16), inset 0 -5px 10px rgba(0,0,0,.12), inset 0 5px 10px rgba(255,255,255,.35);
+  transition:transform .18s, box-shadow .18s;
+  text-shadow:0 2px 3px rgba(0,0,0,.25);
+  animation: floatIn .4s ease backwards;
+}
+.bubble::before { content:''; position:absolute; top:12px; left:14px; width:26px; height:13px;
+  background:rgba(255,255,255,.45); border-radius:50%; filter:blur(4px); }
+.bubble:hover { transform:scale(1.08); }
+.bubble.big { font-size:34px; }
+.bubble.mid { font-size:20px; }
+.bubble.small { font-size:16px; }
+.bubble.sq { width:auto; min-width:118px; height:78px; border-radius:40px; padding:0 16px; }
+.bubble.sq.big { font-size:26px; }
+.bubble.sq.small { font-size:14px; }
+.bubble.selected {
+  transform:scale(1.12); outline:4px solid #ffd700; box-shadow:0 0 22px #ffd700;
+  animation: popIn .22s ease;
+}
+.bubble.done { animation: popUp .5s ease forwards; pointer-events:none; }
+.bubble.wrong { animation: shake .45s ease; box-shadow:0 0 18px #ff5252, 0 6px 14px rgba(0,0,0,.16); }
+@keyframes shake { 0%,100%{transform:translateX(0);} 20%{transform:translateX(-9px);} 40%{transform:translateX(9px);} 60%{transform:translateX(-6px);} 80%{transform:translateX(6px);} }
+@keyframes popUp { 0%{transform:translateY(0) scale(1); opacity:1;} 100%{transform:translateY(-50px) scale(.3); opacity:0;} }
+@keyframes floatIn { from{transform:translateY(24px) scale(.6); opacity:0;} to{transform:none; opacity:1;} }
+@keyframes popIn { 0%{transform:scale(.6);} 60%{transform:scale(1.15);} 100%{transform:scale(1);} }
+
+/* ---------- 选择题 ---------- */
+.quiz-card {
+  background:#fff; border-radius:30px; padding:34px 20px; text-align:center;
+  box-shadow:0 10px 30px rgba(0,0,0,.10); max-width:560px; margin:8px auto 22px;
+}
+.quiz-char { font-size:110px; font-weight:900; color:#4d96ff; line-height:1.2; animation:popIn .3s ease; }
+.quiz-pin { font-size:30px; color:#ff9f43; margin-top:4px; font-weight:bold; }
+.quiz-label { font-size:17px; color:#999; margin-top:10px; }
+.quiz-word { font-size:48px; font-weight:bold; color:#6bcb77; line-height:1.3; }
+.chain-box { font-size:16px; color:#666; margin-top:14px; line-height:1.8; }
+.chain-box b { color:#4d96ff; }
+.chain-char { display:inline-block; font-size:44px; font-weight:900; color:#ff6b6b; margin:8px 10px 0; animation:popIn .3s ease; }
+.chain-pin { font-size:18px; color:#b8860b; font-weight:bold; }
+
+.quiz-options { display:grid; grid-template-columns:1fr 1fr; gap:14px; max-width:560px; margin:0 auto; }
+.opt {
+  padding:20px 8px; font-size:24px; font-weight:bold; border-radius:20px; cursor:pointer;
+  background:#fff; border:3px solid #e5e7eb; color:#333; box-shadow:0 4px 10px rgba(0,0,0,.07);
+  transition:transform .15s;
+}
+.opt:hover { transform:translateY(-3px); border-color:#ff9f43; }
+.opt:active { transform:scale(.95); }
+.opt.correct { background:#6bcb77 !important; color:#fff !important; border-color:#6bcb77 !important; animation:popIn .3s ease; }
+.opt.wrong { background:#ff6b6b !important; color:#fff !important; border-color:#ff6b6b !important; animation:shake .45s ease; }
+.opt.dim { opacity:.45; }
+
+/* ---------- 提示按钮 / 学习卡 / 成就任务 ---------- */
+.hint-btn {
+  padding:6px 14px; border-radius:30px; border:none; cursor:pointer;
+  background:linear-gradient(135deg,#4d96ff,#6bcb77); color:#fff; font-size:15px; font-weight:bold;
+  box-shadow:0 3px 8px rgba(77,150,255,.35); transition:transform .15s;
+}
+.hint-btn:hover { transform:translateY(-2px); }
+.hint-btn.off { background:#ccc; box-shadow:none; cursor:not-allowed; }
+.bubble.hintglow { animation:hintPulse .55s ease 3; outline:4px solid #4d96ff; box-shadow:0 0 24px #4d96ff; }
+@keyframes hintPulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.13);} }
+
+.learn-card { max-width:340px; }
+.learn-big { font-size:88px; font-weight:900; color:#4d96ff; line-height:1.15; }
+.learn-pin { font-size:26px; color:#ff9f43; font-weight:bold; margin-top:2px; }
+.learn-extra { font-size:19px; color:#555; margin-top:10px; line-height:1.6; }
+.learn-tip { font-size:14px; color:#999; margin:12px 0 4px; }
+
+.home-btns { display:flex; justify-content:center; gap:12px; margin-top:16px; }
+.chip-btn {
+  padding:10px 20px; font-size:16px; font-weight:bold; border-radius:40px; cursor:pointer;
+  background:#fff; color:#e07a3f; border:2px solid #ffd9b8; box-shadow:0 3px 10px rgba(0,0,0,.08);
+  transition:transform .15s;
+}
+.chip-btn:hover { transform:translateY(-2px); }
+.home-title { color:#bb8fce; font-size:18px; }
+
+.ach-list { text-align:left; max-height:52vh; overflow-y:auto; padding:4px 6px; }
+.ach-item { display:flex; align-items:center; gap:12px; padding:9px 10px; border-radius:14px; margin-bottom:8px; }
+.ach-item.got { background:#fff8e1; border:1px solid #ffd54f; }
+.ach-item.lock { background:#f4f5f7; opacity:.6; }
+.ach-icon { font-size:30px; }
+.ach-name { font-weight:bold; color:#333; font-size:16px; }
+.ach-desc { font-size:12.5px; color:#999; margin-top:2px; }
+.task-item { display:flex; align-items:center; gap:12px; padding:10px 8px; border-bottom:1px dashed #eee; }
+.task-name { flex:1; font-size:16px; color:#444; }
+.task-prog { font-size:13px; color:#999; }
+.task-bar { height:8px; background:#eee; border-radius:6px; overflow:hidden; margin:5px 0 2px; }
+.task-bar i { display:block; height:100%; background:linear-gradient(90deg,#ffd93d,#ff9f43); border-radius:6px; transition:width .3s; }
+.task-done { font-size:18px; }
+.streak-line { font-size:15px; color:#e07a3f; font-weight:bold; margin-bottom:10px; }
+
+/* ---------- 结算弹窗 ---------- */
+.modal { position:fixed; inset:0; z-index:50; background:rgba(0,0,0,.45);
+  display:flex; align-items:center; justify-content:center; animation:fadeIn .25s ease; }
+.modal-card {
+  background:#fff; border-radius:30px; padding:34px 30px 26px; text-align:center;
+  width:min(92vw,420px); box-shadow:0 16px 50px rgba(0,0,0,.3);
+  animation:modalIn .35s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes modalIn { from{transform:scale(.5) translateY(40px); opacity:0;} to{transform:none; opacity:1;} }
+.stars { font-size:58px; letter-spacing:8px; }
+.stars span { display:inline-block; }
+.stars span.star-in { animation:starIn .5s ease backwards; }
+@keyframes starIn { from{transform:scale(0) rotate(-180deg);} to{transform:scale(1) rotate(0);} }
+.modal-title { font-size:30px; font-weight:900; color:#333; margin:8px 0 6px; }
+.modal-info { font-size:18px; color:#777; margin-bottom:14px; line-height:1.7; }
+.modal-info b { color:#ff9f43; font-size:24px; }
+
+/* ---------- 提示条 ---------- */
+.hint-bar {
+  text-align:center; font-size:15px; color:#8a5a00; background:#fff3cd;
+  border-radius:20px; padding:8px 16px; margin:12px auto 0; max-width:560px;
+}
+
+/* 彩带粒子 */
+.fx { position:fixed; z-index:100; pointer-events:none; border-radius:3px; animation:fxUp linear forwards; }
+@keyframes fxUp { to { transform: translateY(-70px) rotate(240deg); opacity:0; } }
+
+/* 拼出成语提示 */
+.cheng-toast {
+  position:fixed; top:88px; left:50%; transform:translateX(-50%) translateY(-12px);
+  background:rgba(255,255,255,.96); color:#ff6b6b; font-size:26px; font-weight:bold;
+  padding:10px 28px; border-radius:30px; box-shadow:0 6px 20px rgba(0,0,0,.18);
+  opacity:0; transition:opacity .25s, transform .25s; z-index:40; pointer-events:none; white-space:nowrap;
+}
+.cheng-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+.float-star { position:fixed; z-index:0; pointer-events:none; opacity:.5; animation:floatY linear infinite; }
+@keyframes floatY { 0%{transform:translateY(0) rotate(0);} 50%{transform:translateY(-26px) rotate(14deg);} 100%{transform:translateY(0) rotate(0);} }
+
+@media (max-width:640px){
+  .grade-grid{ grid-template-columns:1fr 1fr; }
+  .mode-grid{ grid-template-columns:1fr; }
+  .bubble{ width:76px; height:76px; font-size:24px; }
+  .bubble.big{ font-size:28px; }
+  .bubble.mid{ font-size:17px; }
+  .bubble.small{ font-size:13px; }
+  .bubble.sq{ min-width:92px; height:62px; padding:0 10px; }
+  .quiz-char{ font-size:84px; }
+  .logo{ font-size:42px; }
+}
+</style>
+</head>
+<body>
+<canvas id="bgCanvas"></canvas>
+
+<div id="app">
+
+  <!-- 首页 -->
+  <div id="screen-home" class="screen active">
+    <div class="mascot">📚✨</div>
+    <h1 class="logo">汉字大冒险</h1>
+    <p class="subtitle">小学语文 1~6 年级 · 生字 · 拼音 · 成语 · 组词</p>
+    <button class="big-btn" onclick="goGrade()">🚀 开始冒险</button>
+    <div class="home-stats">我的金币 🪙 <b id="coinHome">0</b> <span class="home-title" id="homeTitle"></span></div>
+    <div class="home-btns">
+      <button class="chip-btn" onclick="showDaily()">📋 今日任务</button>
+      <button class="chip-btn" onclick="showAch()">🏆 成就</button>
+    </div>
+  </div>
+
+  <!-- 年级选择 -->
+  <div id="screen-grade" class="screen">
+    <div class="screen-header">
+      <button class="back-btn" onclick="goHome()">🏠</button>
+      <h2>选择年级</h2>
+    </div>
+    <div class="grade-grid" id="gradeGrid"></div>
+  </div>
+
+  <!-- 模式选择 -->
+  <div id="screen-mode" class="screen">
+    <div class="screen-header">
+      <button class="back-btn" onclick="goGrade()">⬅</button>
+      <h2 id="modeTitle">一年级</h2>
+    </div>
+    <div class="mode-grid" id="modeGrid"></div>
+    <div class="hint-bar" id="modeHint">💡 每答对一题 +10 金币，连续答对还有连击奖励！</div>
+  </div>
+
+  <!-- 关卡选择 -->
+  <div id="screen-levels" class="screen">
+    <div class="screen-header">
+      <button class="back-btn" onclick="goMode()">⬅</button>
+      <h2 id="levelsTitle">生字消消乐 · 一年级</h2>
+    </div>
+    <div class="level-grid" id="levelGrid"></div>
+    <div class="hint-bar" id="levelsHint">🌟 每关难度递增：泡泡更多、超纲字更多，通关解锁下一关！</div>
+  </div>
+
+  <!-- 游戏页 -->
+  <div id="screen-game" class="screen">
+    <div class="game-top">
+      <button class="back-btn" onclick="quitGame()">⬅</button>
+      <div class="top-info">
+        <span id="gameTitle">生字消消乐</span>
+        <span class="progress" id="progressText">0/10</span>
+      </div>
+      <div class="top-right">
+        <button class="hint-btn" id="hintBtn" onclick="useHint()">💡 3</button>
+        <span class="coin">🪙<b id="coinGame">0</b></span>
+        <span class="combo" id="comboText">🔥x2</span>
+      </div>
+    </div>
+    <div id="gameArea"></div>
+  </div>
+
+  <!-- 结算弹窗 -->
+  <div id="modal" style="display:none">
+    <div class="modal-card">
+      <div class="stars" id="stars"></div>
+      <div class="modal-title" id="modalTitle">太棒了！</div>
+      <div class="modal-info" id="modalInfo"></div>
+      <button class="big-btn" id="modalBtn1" onclick="startNext()">▶ 下一关</button>
+      <button class="big-btn gray" onclick="quitGame()">🏠 返回</button>
+    </div>
+  </div>
+
+  <!-- 答错学习卡 -->
+  <div id="learnModal" class="modal" style="display:none">
+    <div class="modal-card learn-card">
+      <div class="learn-big" id="learnBig"></div>
+      <div class="learn-pin" id="learnPin"></div>
+      <div class="learn-extra" id="learnExtra"></div>
+      <div class="learn-tip">💡 记住它，下次再来挑战！</div>
+      <button class="big-btn" onclick="closeLearn()">知道了</button>
+    </div>
+  </div>
+
+  <!-- 每日任务面板 -->
+  <div id="panelDaily" class="modal" style="display:none">
+    <div class="modal-card">
+      <div class="modal-title">📋 今日任务</div>
+      <div class="streak-line" id="streakLine"></div>
+      <div class="ach-list" id="dailyList"></div>
+      <button class="big-btn gray" onclick="closePanel('panelDaily')">关闭</button>
+    </div>
+  </div>
+
+  <!-- 成就面板 -->
+  <div id="panelAch" class="modal" style="display:none">
+    <div class="modal-card">
+      <div class="modal-title">🏆 我的成就</div>
+      <div class="ach-list" id="achList"></div>
+      <button class="big-btn gray" onclick="closePanel('panelAch')">关闭</button>
+    </div>
+  </div>
+
+</div>
+
+<button class="sound-toggle" id="soundBtn" onclick="toggleSound()">🔊</button>
+
+<script>
+"use strict";
+/* ================= 音效系统 (Web Audio 生成, 无需外部文件) ================= */
+const SOUND = {
+  ctx:null, on:true,
+  init(){
+    if(!this.ctx){
+      try{ this.ctx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){}
+    }
+    if(this.ctx && this.ctx.state==='suspended') this.ctx.resume();
+  },
+  tone(f,d=0.14,t='sine',v=0.16,delay=0){
+    if(!this.on||!this.ctx) return;
+    const T = this.ctx.currentTime+delay;
+    const o=this.ctx.createOscillator(), g=this.ctx.createGain();
+    o.type=t; o.frequency.value=f;
+    g.gain.setValueAtTime(v,T);
+    g.gain.exponentialRampToValueAtTime(0.001,T+d);
+    o.connect(g); g.connect(this.ctx.destination);
+    o.start(T); o.stop(T+d);
+  },
+  click(){ this.tone(660,.05,'triangle',.1); },
+  pop(){ this.tone(320,.09,'sine',.2); this.tone(660,.07,'sine',.12,.05); },
+  correct(){ [523,659,784].forEach((f,i)=>this.tone(f,.13,'sine',.2,i*.09)); },
+  star(){ this.tone(1047,.12,'sine',.18); this.tone(1568,.16,'sine',.14,.07); },
+  wrong(){ this.tone(233,.2,'sawtooth',.13); this.tone(185,.28,'sawtooth',.12,.12); },
+  win(){ [523,659,784,1047,784,1047,1319].forEach((f,i)=>this.tone(f,.16,'triangle',.2,i*.11)); },
+  lose(){ [392,330,262].forEach((f,i)=>this.tone(f,.22,'sine',.18,i*.14)); }
+};
+function toggleSound(){
+  SOUND.on=!SOUND.on;
+  document.getElementById('soundBtn').textContent=SOUND.on?'🔊':'🔇';
+  document.getElementById('soundBtn').classList.toggle('off',!SOUND.on);
+  if(SOUND.on){ SOUND.init(); SOUND.click(); }
+}
+
+/* ================= 彩带粒子特效 ================= */
+function spawnFx(x,y,n=14,emoji=''){
+  for(let i=0;i<n;i++){
+    const d=document.createElement('div');
+    d.className='fx';
+    const size=6+Math.random()*10;
+    d.style.cssText=`left:${x}px;top:${y}px;width:${size}px;height:${size}px;
+      background:${['#ff6b6b','#ff9f43','#ffd93d','#6bcb77','#4d96ff','#bb8fce'][i%6]};
+      animation-duration:${700+Math.random()*800}ms;
+      transform:rotate(${Math.random()*360}deg);`;
+    if(emoji){ d.style.background='none'; d.style.fontSize=(size+10)+'px'; d.textContent=emoji; }
+    document.body.appendChild(d);
+    setTimeout(()=>d.remove(),1600);
+  }
+}
+function rainCelebrate(){
+  for(let i=0;i<26;i++){
+    setTimeout(()=>{
+      spawnFx(Math.random()*innerWidth, innerHeight*(0.35+Math.random()*0.55), 1, ['🎉','⭐','🎊','✨','❤️'][Math.floor(Math.random()*5)]);
+    }, i*70);
+  }
+}
+function fireworkAt(el){
+  if(!el) return;
+  const r=el.getBoundingClientRect();
+  spawnFx(r.left+r.width/2, r.top+r.height/2, 16);
+}
+
+/* ================= 数据（按年级，字+拼音+组词） ================= */
+const GRADE_NAMES=['','一年级','二年级','三年级','四年级','五年级','六年级'];
+const GRADE_TAGS=['启蒙入门','打好基础','识字飞跃','读写结合','积累运用','冲刺进阶'];
+const GRADE_COLORS=['','#ff6b6b','#ff9f43','#ffd93d','#6bcb77','#4d96ff','#bb8fce'];
+// __DATA_GRADES__
+const GRADE_DATA={
+1:[
+["一","yī","一个"],["二","èr","二月"],["三","sān","三个"],["四","sì","四月"],["五","wǔ","五个"],["六","liù","六月"],
+["七","qī","七个"],["八","bā","八个"],["九","jiǔ","九个"],["十","shí","十月"],["上","shàng","上学"],["下","xià","下雨"],
+["口","kǒu","人口"],["耳","ěr","耳朵"],["目","mù","目光"],["手","shǒu","双手"],["足","zú","手足"],["日","rì","日子"],
+["月","yuè","月亮"],["水","shuǐ","水果"],["火","huǒ","火车"],["山","shān","高山"],["石","shí","石头"],["田","tián","田地"],
+["禾","hé","禾苗"],["云","yún","白云"],["雨","yǔ","下雨"],["风","fēng","大风"],["花","huā","花朵"],["鸟","niǎo","小鸟"],
+["虫","chóng","虫子"],["天","tiān","天空"],["地","dì","土地"],["人","rén","人们"],["你","nǐ","你好"],["我","wǒ","我们"],
+["他","tā","他们"],["爸","bà","爸爸"],["妈","mā","妈妈"],["马","mǎ","小马"],["土","tǔ","泥土"],["不","bù","不是"],
+["画","huà","画画"],["打","dǎ","打球"],["棋","qí","下棋"],["鸡","jī","公鸡"],["字","zì","生字"],["词","cí","词语"],
+["语","yǔ","语文"],["星","xīng","星星"],["江","jiāng","长江"],["南","nán","南方"],["可","kě","可爱"],["采","cǎi","采花"],
+["莲","lián","莲花"],["鱼","yú","小鱼"],["东","dōng","东方"],["西","xī","西瓜"],["北","běi","北方"],["尖","jiān","尖尖"],
+["春","chūn","春天"],["青","qīng","青草"],["蛙","wā","青蛙"],["夏","xià","夏天"],["皮","pí","皮球"],["就","jiù","就是"],
+["冬","dōng","冬天"],["男","nán","男生"],["女","nǚ","女生"],["开","kāi","开门"],["关","guān","关门"],["正","zhèng","正确"],
+["反","fǎn","反光"],["远","yuǎn","远方"],["有","yǒu","有用"],["色","sè","颜色"],["近","jìn","附近"],["听","tīng","听见"],
+["无","wú","无声"],["声","shēng","声音"],["去","qù","来去"],["还","hái","还有"],["来","lái","回来"],["多","duō","多少"],
+["少","shǎo","很少"],["黄","huáng","黄色"],["牛","niú","黄牛"],["只","zhī","一只"],["猫","māo","小猫"],["边","biān","旁边"],
+["鸭","yā","鸭子"],["苹","píng","苹果"],["果","guǒ","水果"],["杏","xìng","杏子"],["桃","táo","桃子"],["书","shū","书本"],
+["包","bāo","书包"],["尺","chǐ","尺子"],["作","zuò","作业"],["业","yè","作业"],["本","běn","本子"],["笔","bǐ","铅笔"],
+["刀","dāo","小刀"],["课","kè","上课"],["早","zǎo","早上"],["校","xiào","学校"],["明","míng","明天"],["力","lì","力气"],
+["尘","chén","灰尘"],["众","zhòng","大众"],["双","shuāng","双手"],["木","mù","木头"],["林","lín","树林"],["森","sēn","森林"],
+["条","tiáo","面条"],["心","xīn","开心"],["升","shēng","上升"],["国","guó","国家"],["旗","qí","国旗"],["中","zhōng","中国"],
+["红","hóng","红色"],["歌","gē","唱歌"],["起","qǐ","起来"],["美","měi","美丽"],["丽","lì","秀丽"],["立","lì","立正"],
+["午","wǔ","中午"],["晚","wǎn","晚上"],["昨","zuó","昨天"],["今","jīn","今天"],["年","nián","新年"],["影","yǐng","影子"],
+["前","qián","前面"],["后","hòu","后面"],["黑","hēi","黑色"],["狗","gǒu","小狗"],["左","zuǒ","左手"],["右","yòu","右手"],
+["它","tā","它们"],["好","hǎo","美好"],["朋","péng","朋友"],["友","yǒu","友好"],["比","bǐ","比较"],["尾","wěi","尾巴"],
+["巴","bā","下巴"],["谁","shuí","谁的"],["长","cháng","长短"],["短","duǎn","长短"],["把","bǎ","一把"],["伞","sǎn","雨伞"],
+["兔","tù","兔子"],["最","zuì","最好"],["公","gōng","公园"],["写","xiě","写字"],["诗","shī","古诗"],["点","diǎn","一点"],
+["要","yào","需要"],["过","guò","过去"],["给","gěi","送给"],["当","dāng","当时"],["们","men","我们"],["以","yǐ","可以"],
+["成","chéng","成为"],["数","shù","数字"],["彩","cǎi","彩色"],["半","bàn","一半"],["空","kōng","天空"],["问","wèn","问题"],
+["到","dào","来到"],["方","fāng","方向"],["没","méi","没有"],["更","gèng","更加"],["绿","lǜ","绿色"],["出","chū","出去"],
+["睡","shuì","睡觉"],["那","nà","那边"],["海","hǎi","大海"],["真","zhēn","认真"],["老","lǎo","老师"],["师","shī","老师"],
+["吗","ma","好吗"],["同","tóng","同学"],["什","shén","什么"],["才","cái","刚才"],["亮","liàng","明亮"],["时","shí","时间"],
+["候","hòu","时候"],["觉","jué","觉得"],["得","dé","得到"],["自","zì","自己"],["己","jǐ","自己"],["很","hěn","很好"],
+["穿","chuān","穿衣"],["衣","yī","衣服"],["服","fú","衣服"],["快","kuài","快乐"],["蓝","lán","蓝色"],["又","yòu","又大"],
+["笑","xiào","微笑"],["着","zhe","看着"],["向","xiàng","方向"],["和","hé","和平"],["贝","bèi","贝壳"],["娃","wá","娃娃"],
+["挂","guà","挂起"],["活","huó","生活"],["金","jīn","金色"],["群","qún","群众"],["竹","zhú","竹子"],["牙","yá","牙齿"],
+["用","yòng","用心"],["几","jǐ","几个"],["步","bù","跑步"],["为","wèi","因为"],["参","cān","参加"],["加","jiā","加法"],
+["洞","dòng","山洞"],["乌","wū","乌鸦"],["鸦","yā","乌鸦"],["处","chù","到处"],["找","zhǎo","找到"],["办","bàn","办法"],
+["旁","páng","旁边"],["许","xǔ","许多"],["法","fǎ","办法"],["放","fàng","放学"],["进","jìn","进来"],["高","gāo","高兴"],
+["住","zhù","住下"],["孩","hái","孩子"],["玩","wán","玩耍"],["吧","ba","好吧"],["发","fā","发现"],["芽","yá","发芽"],
+["爬","pá","爬山"],["呀","ya","好呀"],["久","jiǔ","很久"],["回","huí","回来"],["全","quán","全部"],["变","biàn","变化"],
+["哥","gē","哥哥"],["姐","jiě","姐姐"],["弟","dì","弟弟"],["叔","shū","叔叔"],["爷","yé","爷爷"],["工","gōng","工人"],
+["厂","chǎng","工厂"],["医","yī","医生"],["院","yuàn","医院"],["霜","shuāng","秋霜"],["落","luò","落叶"],["姓","xìng","姓名"],
+["李","lǐ","李子"],["张","zhāng","张开"],["清","qīng","清水"],["晴","qíng","晴天"],["眼","yǎn","眼睛"],["睛","jīng","眼睛"],
+["保","bǎo","保护"],["护","hù","保护"],["事","shì","事情"],["情","qíng","心情"],["请","qǐng","请问"],["让","ràng","让开"],
+["病","bìng","生病"],["喜","xǐ","喜欢"],["欢","huān","喜欢"],["怕","pà","害怕"],["言","yán","语言"],["动","dòng","动作"],
+["万","wàn","千万"],["纯","chún","纯净"],["净","jìng","干净"],["阴","yīn","阴天"],["雷","léi","雷雨"],["电","diàn","闪电"],
+["冰","bīng","冰块"],["冻","dòng","冰冻"],["吃","chī","吃饭"],["忘","wàng","忘记"],["井","jǐng","水井"],["村","cūn","村庄"],
+["叫","jiào","叫声"],["毛","máo","毛巾"],["主","zhǔ","主人"],["乡","xiāng","乡村"],["亲","qīn","亲人"],["战","zhàn","战士"],
+["士","shì","士兵"],["面","miàn","面粉"],["想","xiǎng","想念"],["告","gào","告诉"],["诉","sù","告诉"],["京","jīng","北京"],
+["安","ān","安全"],["门","mén","大门"],["广","guǎng","广大"],["非","fēi","非常"],["常","cháng","常常"],["壮","zhuàng","壮丽"],
+["观","guān","观看"],["接","jiē","接着"],["再","zài","再见"],["做","zuò","做事"],["各","gè","各种"],["样","yàng","样子"],
+["伙","huǒ","伙伴"],["伴","bàn","伙伴"],["却","què","却是"],["趣","qù","有趣"],["这","zhè","这个"],["太","tài","太阳"],
+["阳","yáng","阳光"],["道","dào","道路"],["送","sòng","送行"],["忙","máng","急忙"],["尝","cháng","品尝"],["香","xiāng","香味"],
+["甜","tián","甜蜜"],["温","wēn","温暖"],["暖","nuǎn","暖和"],["该","gāi","应该"],["颜","yán","颜色"],["因","yīn","因为"],
+["块","kuài","一块"],["捉","zhuō","捉虫"],["急","jí","着急"],["直","zhí","直线"],["河","hé","河水"],["行","xíng","行走"],
+["信","xìn","信心"],["跟","gēn","跟着"],["忽","hū","忽然"],["喊","hǎn","喊叫"],["身","shēn","身体"],["窝","wō","鸟窝"],
+["孤","gū","孤独"],["单","dān","单独"],["种","zhǒng","种子"],["都","dōu","都是"],["邻","lín","邻居"],["居","jū","居住"],
+["招","zhāo","招手"],["呼","hū","呼吸"],["静","jìng","安静"],["乐","lè","快乐"],["怎","zěn","怎么"],["独","dú","独自"],
+["跳","tiào","跳高"],["绳","shéng","绳子"],["讲","jiǎng","讲话"],["羽","yǔ","羽毛"],["球","qiú","皮球"],["戏","xì","游戏"],
+["排","pái","排队"],["篮","lán","篮球"],["连","lián","连忙"],["运","yùn","运动"],["夜","yè","夜晚"],["思","sī","思考"],
+["床","chuáng","起床"],["光","guāng","阳光"],["疑","yí","怀疑"],["举","jǔ","举手"],["望","wàng","看望"],["低","dī","低头"],
+["故","gù","故乡"],["胆","dǎn","胆子"],["敢","gǎn","勇敢"],["往","wǎng","来往"],["外","wài","外面"],["勇","yǒng","勇敢"],
+["窗","chuāng","窗户"],["乱","luàn","乱跑"],["散","sàn","散步"],["原","yuán","原来"],["像","xiàng","好像"],["微","wēi","微笑"],
+["端","duān","端正"],["节","jié","节日"],["总","zǒng","总是"],["米","mǐ","大米"],["间","jiān","中间"],["分","fēn","分开"],
+["豆","dòu","豆子"],["肉","ròu","牛肉"],["带","dài","带子"],["知","zhī","知道"],["念","niàn","想念"],["虹","hóng","彩虹"],
+["座","zuò","座位"],["浇","jiāo","浇水"],["提","tí","提问"],["洒","sǎ","洒水"],["挑","tiāo","挑水"],["兴","xìng","高兴"],
+["镜","jìng","镜子"],["拿","ná","拿手"],["照","zhào","照相"],["千","qiān","千万"],["裙","qún","裙子"]
+],
+2:[
+["塘","táng","池塘"],["脑","nǎo","脑袋"],["袋","dài","口袋"],["灰","huī","灰色"],["捕","bǔ","捕鱼"],["迎","yíng","欢迎"],
+["宽","kuān","宽大"],["龟","guī","乌龟"],["顶","dǐng","头顶"],["披","pī","披上"],["鼓","gǔ","打鼓"],["晒","shài","晒太阳"],
+["极","jí","南极"],["傍","bàng","傍晚"],["越","yuè","越过"],["滴","dī","水滴"],["溪","xī","小溪"],["奔","bēn","奔跑"],
+["洋","yáng","海洋"],["坏","huài","坏事"],["淹","yān","淹没"],["冲","chōng","冲走"],["毁","huǐ","毁坏"],["屋","wū","房屋"],
+["猜","cāi","猜想"],["植","zhí","植树"],["如","rú","如果"],["旅","lǚ","旅行"],["备","bèi","准备"],["纷","fēn","纷纷"],
+["刺","cì","刺猬"],["底","dǐ","底下"],["炸","zhà","炸弹"],["离","lí","离开"],["察","chá","观察"],["识","shí","认识"],
+["粗","cū","粗心"],["菊","jú","菊花"],["桂","guì","桂花"],["松","sōng","松树"],["柏","bǎi","松柏"],["枫","fēng","枫叶"],
+["桦","huà","白桦"],["杉","shān","杉树"],["棉","mián","棉花"],["帆","fān","帆船"],["军","jūn","军队"],["舰","jiàn","军舰"],
+["园","yuán","花园"],["翠","cuì","翠绿"],["队","duì","队伍"],["号","hào","口号"],["掌","zhǎng","手掌"],["世","shì","世界"],
+["界","jiè","世界"],["孔","kǒng","孔雀"],["雀","què","孔雀"],["锦","jǐn","锦绣"],["雄","xióng","英雄"],["鹰","yīng","老鹰"],
+["雁","yàn","大雁"],["丛","cóng","草丛"],["深","shēn","深浅"],["猛","měng","凶猛"],["灵","líng","灵活"],["休","xiū","休息"],
+["季","jì","季节"],["蝴","hú","蝴蝶"],["蝶","dié","蝴蝶"],["麦","mài","麦子"],["苗","miáo","禾苗"],["桑","sāng","桑叶"],
+["肥","féi","肥料"],["归","guī","回归"],["戴","dài","戴帽"],["谷","gǔ","山谷"],["粒","lì","米粒"],["虽","suī","虽然"],
+["辛","xīn","辛苦"],["苦","kǔ","辛苦"],["葡","pú","葡萄"],["萄","táo","葡萄"],["紫","zǐ","紫色"],["狐","hú","狐狸"],
+["狸","lí","狐狸"],["笨","bèn","笨重"],["酸","suān","酸味"],["曹","cáo","曹冲"],["称","chēng","称呼"],["员","yuán","队员"],
+["根","gēn","树根"],["柱","zhù","柱子"],["议","yì","议论"],["论","lùn","讨论"],["重","zhòng","重量"],["杆","gǎn","杆子"],
+["秤","chèng","秤杆"],["砍","kǎn","砍树"],["线","xiàn","线条"],["止","zhǐ","停止"],["量","liáng","测量"],["玲","líng","玲珑"],
+["详","xiáng","详细"],["幅","fú","一幅"],["评","píng","评论"],["奖","jiǎng","奖品"],["催","cuī","催促"],["报","bào","报纸"],
+["另","lìng","另外"],["及","jí","及时"],["懒","lǎn","懒惰"],["糟","zāo","糟糕"],["肯","kěn","肯定"],["封","fēng","信封"],
+["削","xiāo","削皮"],["锅","guō","铁锅"],["刮","guā","刮风"],["胡","hú","胡子"],["修","xiū","修理"],["冷","lěng","寒冷"],
+["肩","jiān","肩膀"],["团","tuán","团结"],["完","wán","完成"],["期","qī","日期"],["结","jié","结果"],["束","shù","结束"],
+["鲜","xiān","鲜花"],["哄","hǒng","哄骗"],["梦","mèng","做梦"],["闭","bì","关闭"],["紧","jǐn","紧张"],["润","rùn","湿润"],
+["等","děng","等待"],["吸","xī","吸收"],["汗","hàn","汗水"],["额","é","额头"],["沙","shā","沙子"],["乏","fá","疲乏"],
+["楼","lóu","楼房"],["依","yī","依靠"],["尽","jìn","尽力"],["欲","yù","欲望"],["穷","qióng","穷困"],["层","céng","一层"],
+["瀑","pù","瀑布"],["布","bù","布匹"],["炉","lú","火炉"],["烟","yān","烟雾"],["遥","yáo","遥远"],["闻","wén","闻名"],
+["名","míng","名字"],["景","jǐng","风景"],["区","qū","山区"],["省","shěng","省份"],["秀","xiù","秀丽"],["尤","yóu","尤其"],
+["其","qí","其中"],["仙","xiān","神仙"],["巨","jù","巨大"],["位","wèi","位置"],["著","zhù","著名"],["形","xíng","形状"],
+["状","zhuàng","形状"],["潭","tán","水潭"],["湾","wān","台湾"],["湖","hú","湖水"],["绕","rào","围绕"],["茂","mào","茂盛"],
+["盛","shèng","盛开"],["围","wéi","包围"],["胜","shèng","胜利"],["央","yāng","中央"],["岛","dǎo","小岛"],["纱","shā","纱布"],
+["童","tóng","儿童"],["境","jìng","环境"],["引","yǐn","吸引"],["客","kè","客人"],["沟","gōu","水沟"],["产","chǎn","生产"],
+["份","fèn","一份"],["枝","zhī","树枝"],["搭","dā","搭桥"],["淡","dàn","淡水"],["够","gòu","足够"],["收","shōu","丰收"],
+["城","chéng","城市"],["市","shì","城市"],["留","liú","留下"],["钉","dīng","钉子"],["利","lì","锋利"],["味","wèi","味道"],
+["沿","yán","沿着"],["答","dá","回答"],["渴","kě","口渴"],["喝","hē","喝水"],["话","huà","说话"],["弄","nòng","弄坏"],
+["错","cuò","错误"],["际","jì","实际"],["抬","tái","抬头"],["堵","dǔ","堵车"],["缝","fèng","裂缝"],["鹊","què","喜鹊"],
+["朗","lǎng","晴朗"],["衔","xián","衔接"],["枯","kū","枯树"],["劝","quàn","劝说"],["趁","chèn","趁机"],["将","jiāng","将来"],
+["腊","là","腊月"],["狂","kuáng","疯狂"],["吼","hǒu","吼叫"],["复","fù","复习"],["哀","āi","悲哀"],["葫","hú","葫芦"],
+["芦","lú","葫芦"],["藤","téng","藤蔓"],["谢","xiè","谢谢"],["感","gǎn","感动"],["怪","guài","奇怪"],["慢","màn","慢慢"],
+["洪","hóng","洪水"],["毒","dú","有毒"],["蛇","shé","毒蛇"],["兽","shòu","野兽"],["伤","shāng","受伤"],["灾","zāi","灾难"],
+["难","nán","困难"],["仍","réng","仍然"],["退","tuì","后退"],["继","jì","继续"],["续","xù","继续"],["训","xùn","训练"],
+["被","bèi","被子"],["恢","huī","恢复"],["德","dé","品德"],["扁","biǎn","扁担"],["担","dān","担心"],["志","zhì","志向"],
+["伍","wǔ","队伍"],["敌","dí","敌人"],["陡","dǒu","陡坡"],["争","zhēng","争吵"],["仗","zhàng","打仗"],["疼","téng","心疼"],
+["料","liào","材料"],["敬","jìng","尊敬"],["泼","pō","活泼"],["族","zú","民族"],["民","mín","人民"],["度","dù","温度"],
+["敲","qiāo","敲门"],["龙","lóng","龙舟"],["驶","shǐ","驾驶"],["容","róng","容易"],["踩","cǎi","踩踏"],["铺","pù","床铺"],
+["碗","wǎn","饭碗"],["祝","zhù","祝福"],["福","fú","幸福"],["健","jiàn","健康"],["康","kāng","健康"],["寿","shòu","长寿"],
+["宿","sù","住宿"],["寺","sì","寺庙"],["危","wēi","危险"],["辰","chén","星辰"],["恐","kǒng","恐怕"],["惊","jīng","惊讶"],
+["似","sì","相似"],["庐","lú","庐山"],["笼","lóng","灯笼"],["盖","gài","盖子"],["苍","cāng","苍茫"],["茫","máng","茫茫"],
+["雾","wù","大雾"],["淘","táo","淘气"],["暗","àn","黑暗"],["岸","àn","岸边"],["街","jiē","大街"],["梁","liáng","桥梁"],
+["甚","shèn","甚至"],["至","zhì","至今"],["切","qiē","切开"],["躲","duǒ","躲藏"],["失","shī","丢失"],["累","lèi","劳累"],
+["添","tiān","添加"],["柴","chái","柴火"],["烧","shāo","烧火"],["旺","wàng","兴旺"],["渐","jiàn","渐渐"],["冒","mào","冒烟"],
+["烫","tàng","烫伤"],["终","zhōng","终于"],["浑","hún","浑身"],["淋","lín","淋雨"],["灭","miè","灭火"],["激","jī","激动"],
+["假","jiǎ","假装"],["威","wēi","威风"],["转","zhuǎn","转身"],["扯","chě","拉扯"],["嗓","sǎng","嗓子"],["派","pài","派送"],
+["违","wéi","违反"],["抗","kàng","反抗"],["爪","zhuǎ","爪子"],["趟","tàng","一趟"],["神","shén","神仙"],["猪","zhū","小猪"],
+["纳","nà","纳闷"],["闷","mēn","闷热"],["受","shòu","接受"],["骗","piàn","骗人"],["借","jiè","借书"],["捡","jiǎn","捡起"],
+["俩","liǎ","我俩"],["始","shǐ","开始"],["拌","bàn","搅拌"],["帮","bāng","帮忙"],["匀","yún","均匀"],["嚷","rǎng","叫嚷"],
+["瞧","qiáo","瞧见"],["便","biàn","方便"],["剩","shèng","剩下"],["整","zhěng","整齐"],["筝","zhēng","风筝"],["鼠","shǔ","老鼠"],
+["折","zhé","折断"],["漂","piāo","漂流"],["扎","zhā","扎针"],["抓","zhuā","抓住"],["幸","xìng","幸福"],["但","dàn","但是"],
+["愿","yuàn","愿意"],["哭","kū","哭泣"],["取","qǔ","取得"],["助","zhù","帮助"],["抽","chōu","抽水"],["劲","jìn","使劲"],
+["哗","huā","哗哗"],["秧","yāng","秧苗"],["拉","lā","拉手"],["表","biǎo","手表"],["示","shì","表示"],["摆","bǎi","摆手"],
+["翻","fān","翻开"],["栽","zāi","栽树"],["责","zé","责任"],["弹","tán","弹琴"],["钢","gāng","钢铁"],["琴","qín","钢琴"],
+["捏","niē","捏泥"],["泥","ní","泥土"],["滚","gǔn","滚动"],["铁","tiě","铁环"],["环","huán","铁环"],["荡","dàng","荡漾"],
+["滑","huá","滑冰"],["梯","tī","楼梯"],["调","tiáo","调皮"],["硬","yìng","坚硬"],["卧","wò","卧室"],["限","xiàn","无限"],
+["乘","chéng","乘客"],["售","shòu","销售"],["锋","fēng","锋利"],["蜜","mì","蜜蜂"],["蜂","fēng","蜜蜂"],["幕","mù","夜幕"],
+["扫","sǎo","打扫"],["墓","mù","扫墓"],["慕","mù","羡慕"],["抄","chāo","抄写"],["炒","chǎo","炒菜"],["轿","jiào","轿车"],
+["救","jiù","救命"],["摩","mó","摩托"],["托","tuō","托起"],["防","fáng","防止"],["渔","yú","渔船"],["货","huò","货物"],
+["油","yóu","石油"],["轮","lún","轮船"],["科","kē","科学"],["考","kǎo","考试"],["滩","tān","沙滩"],["椰","yē","椰子"],
+["壳","ké","贝壳"],["漠","mò","沙漠"],["骆","luò","骆驼"],["驼","tuó","骆驼"],["骏","jùn","骏马"],["悬","xuán","悬挂"],
+["崖","yá","山崖"],["狼","láng","狼群"],["猩","xīng","猩猩"],["鹤","hè","仙鹤"],["鸽","gē","鸽子"],["羚","líng","羚羊"],
+["蚯","qiū","蚯蚓"],["蚓","yǐn","蚯蚓"],["螃","páng","螃蟹"],["蟹","xiè","螃蟹"],["虾","xiā","小虾"],["蚕","cán","蚕丝"]
+],
+3:[
+["坝","bà","大坝"],["汉","hàn","汉族"],["艳","yàn","鲜艳"],["扮","bàn","打扮"],["扬","yáng","飘扬"],["读","dú","读书"],
+["摔","shuāi","摔倒"],["跤","jiāo","摔跤"],["荒","huāng","荒凉"],["笛","dí","笛子"],["罚","fá","惩罚"],["假","jià","放假"],
+["背","bèi","背诵"],["诵","sòng","朗诵"],["例","lì","例子"],["段","duàn","段落"],["练","liàn","练习"],["糊","hú","糊涂"],
+["涂","tú","糊涂"],["呆","dāi","发呆"],["戒","jiè","戒烟"],["厉","lì","严厉"],["挨","āi","挨着"],["楚","chǔ","清楚"],
+["径","jìng","小径"],["斜","xié","斜阳"],["赠","zèng","赠送"],["残","cán","残阳"],["犹","yóu","犹豫"],["傲","ào","骄傲"],
+["君","jūn","君子"],["橙","chéng","橙子"],["橘","jú","橘子"],["挑","tiāo","挑选"],["洼","wā","水洼"],["印","yìn","脚印"],
+["凌","líng","凌晨"],["增","zēng","增加"],["棕","zōng","棕色"],["靴","xuē","皮靴"],["钥","yào","钥匙"],["匙","shi","钥匙"],
+["缤","bīn","缤纷"],["枚","méi","一枚"],["勾","gōu","勾画"],["喇","lǎ","喇叭"],["叭","bā","喇叭"],["厚","hòu","厚度"],
+["曲","qǔ","歌曲"],["丰","fēng","丰收"],["抖","dǒu","抖动"],["蟋","xī","蟋蟀"],["蟀","shuài","蟋蟀"],["振","zhèn","振动"],
+["掠","lüè","掠过"],["吟","yín","吟诵"],["辽","liáo","辽阔"],["阔","kuò","宽阔"],["旧","jiù","新旧"],["饿","è","饥饿"],
+["卷","juǎn","卷起"],["燃","rán","燃烧"],["焰","yàn","火焰"],["蜡","là","蜡烛"],["烛","zhú","蜡烛"],["富","fù","丰富"],
+["晃","huàng","摇晃"],["划","huá","划船"],["喷","pēn","喷水"],["缩","suō","缩小"],["努","nǔ","努力"],["茎","jīng","根茎"],
+["锯","jù","锯子"],["斧","fǔ","斧头"],["推","tuī","推动"],["拆","chāi","拆除"],["咱","zán","咱们"],["偷","tōu","小偷"],
+["骨","gǔ","骨头"],["齿","chǐ","牙齿"],["嚼","jiáo","咀嚼"],["吞","tūn","吞下"],["胃","wèi","胃口"],["悲","bēi","悲伤"],
+["咽","yān","咽喉"],["泪","lèi","泪水"],["眯","mī","眯眼"],["诱","yòu","引诱"],["舔","tiǎn","舔舔"],["毅","yì","毅力"],
+["犯","fàn","犯错"],["禁","jīn","不禁"],["豫","yù","犹豫"],["跺","duò","跺脚"],["聚","jù","聚集"],["暴","bào","暴雨"],
+["凑","còu","凑近"],["孵","fū","孵蛋"],["偶","ǒu","偶尔"],["尔","ěr","偶尔"],["萝","luó","萝卜"],["卜","bo","萝卜"],
+["愁","chóu","发愁"],["沾","zhān","沾湿"],["晾","liàng","晾晒"],["讨","tǎo","讨厌"],["厌","yàn","讨厌"],["怒","nù","发怒"],
+["批","pī","批评"],["访","fǎng","访问"],["担","dān","担心"],["压","yā","压力"],["差","chà","差不多"],["忍","rěn","忍受"],
+["模","mó","模型"],["弹","dàn","子弹"],["疯","fēng","疯狂"],["汪","wāng","汪汪"],["搞","gǎo","搞笑"],["父","fù","父亲"],
+["鹦","yīng","鹦鹉"],["鹉","wǔ","鹦鹉"],["悄","qiāo","悄悄"],["蒲","pú","蒲公英"],["英","yīng","英雄"],["耍","shuǎ","玩耍"],
+["欠","qiàn","欠账"],["钓","diào","钓鱼"],["拢","lǒng","合拢"],["抹","mǒ","抹布"],["宜","yí","便宜"],["庭","tíng","家庭"],
+["磨","mó","磨刀"],["盘","pán","盘子"],["饶","ráo","富饶"],["优","yōu","优秀"],["瑰","guī","玫瑰"],["岩","yán","岩石"],
+["武","wǔ","武术"],["粪","fèn","粪土"],["辈","bèi","长辈"],["设","shè","设计"],["滨","bīn","海滨"],["鸥","ōu","海鸥"],
+["臂","bì","手臂"],["睬","cǎi","理睬"],["凰","huáng","凤凰"],["亚","yà","亚洲"],["榕","róng","榕树"],["凳","dèng","板凳"],
+["逢","féng","相逢"],["除","chú","除法"],["融","róng","融化"],["侧","cè","侧面"],["欣","xīn","欣赏"],["浸","jìn","沉浸"],
+["乳","rǔ","乳汁"],["梢","shāo","树梢"],["显","xiǎn","明显"],["材","cái","木材"],["膝","xī","膝盖"],["临","lín","临时"],
+["库","kù","仓库"],["妙","miào","美妙"],["奏","zòu","演奏"],["喃","nán","呢喃"],["伟","wěi","伟大"],["击","jī","打击"],
+["汇","huì","汇集"],["麻","má","芝麻"],["旋","xuán","旋转"],["佩","pèi","敬佩"],["姿","zī","姿势"],["态","tài","态度"],
+["笋","sǔn","竹笋"],["寸","cùn","尺寸"],["爽","shuǎng","凉爽"],["黎","lí","黎明"],["凝","níng","凝视"],["畅","chàng","流畅"],
+["瞬","shùn","瞬间"],["猎","liè","打猎"],["司","sī","司机"],["跌","diē","跌倒"],["皆","jiē","皆知"],["弃","qì","放弃"],
+["持","chí","坚持"],["默","mò","沉默"],["势","shì","势力"],["投","tóu","投入"],["调","diào","调动"],["况","kuàng","情况"],
+["烈","liè","热烈"],["镇","zhèn","小镇"],["述","shù","讲述"],["普","pǔ","普通"],["忧","yōu","忧愁"],["联","lián","联系"],
+["胸","xiōng","胸口"],["脯","fǔ","胸脯"],["惹","rě","惹事"],["仰","yǎng","仰头"],["渣","zhā","渣土"],["者","zhě","作者"],
+["惜","xī","珍惜"],["诚","chéng","诚实"],["棒","bàng","真棒"],["恩","ēn","恩情"],["血","xuè","血液"],["撤","chè","撤退"],
+["险","xiǎn","危险"],["瓦","wǎ","瓦片"],["帘","lián","窗帘"],["迅","xùn","迅速"],["速","sù","快速"],["夺","duó","争夺"],
+["秒","miǎo","秒针"]
+],
+4:[
+["盐","yán","食盐"],["薄","bó","薄雾"],["屹","yì","屹立"],["昂","áng","昂首"],["顿","dùn","顿时"],["鼎","dǐng","鼎沸"],
+["沸","fèi","沸腾"],["贯","guàn","横贯"],["浩","hào","浩瀚"],["崩","bēng","崩溃"],["震","zhèn","地震"],["霎","shà","霎时"],
+["鹅","é","白鹅"],["卵","luǎn","鹅卵石"],["俗","sú","风俗"],["跃","yuè","跳跃"],["穗","suì","稻穗"],["镀","dù","镀金"],
+["埂","gěng","田埂"],["烁","shuò","闪烁"],["巢","cháo","鸟巢"],["苇","wěi","芦苇"],["罗","luó","罗列"],["眠","mián","睡眠"],
+["霸","bà","霸道"],["占","zhàn","占领"],["昧","mèi","愚昧"],["坠","zhuì","坠落"],["怀","huái","怀抱"],["豌","wān","豌豆"],
+["按","àn","按动"],["僵","jiāng","僵硬"],["预","yù","预告"],["揭","jiē","揭开"],["苔","tái","青苔"],["囚","qiú","囚犯"],
+["框","kuàng","门框"],["溢","yì","溢出"],["蝙","biān","蝙蝠"],["蝠","fú","蝙蝠"],["即","jí","立即"],["锐","ruì","尖锐"],
+["蝇","yíng","苍蝇"],["证","zhèng","证明"],["障","zhàng","障碍"],["碍","ài","障碍"],["荧","yíng","荧光"],["屏","píng","屏幕"],
+["唤","huàn","呼唤"],["技","jì","技术"],["获","huò","获得"],["赖","lài","依赖"],["潜","qián","潜水"],["亿","yì","亿万"],
+["索","suǒ","搜索"],["奥","ào","奥妙"],["质","zhì","质量"],["哲","zhé","哲学"],["避","bì","躲避"],["撼","hàn","震撼"],
+["喧","xuān","喧闹"],["檐","yán","屋檐"],["暮","mù","暮色"],["瑟","sè","萧瑟"],["缘","yuán","缘分"],["骚","sāo","风骚"],
+["逊","xùn","谦逊"],["输","shū","输赢"],["均","jūn","均匀"],["柄","bǐng","把柄"],["蜗","wō","蜗牛"],["萎","wěi","枯萎"],
+["宅","zhái","住宅"],["隐","yǐn","隐藏"],["毫","háo","丝毫"],["慎","shèn","谨慎"],["址","zhǐ","地址"],["良","liáng","良好"],
+["掘","jué","挖掘"],["搜","sōu","搜索"],["倾","qīng","倾斜"],["骤","zhòu","骤雨"],["置","zhì","放置"],["抛","pāo","抛弃"],
+["劈","pī","劈开"],["浊","zhuó","浑浊"],["丈","zhàng","丈量"],["隆","lóng","隆重"],["肢","zhī","肢体"],["躯","qū","身躯"],
+["液","yè","液体"],["帝","dì","皇帝"],["溺","nì","溺水"],["返","fǎn","返回"],["惨","cǎn","悲惨"],["盗","dào","盗窃"],
+["佩","pèi","敬佩"],["恕","shù","宽恕"],["坚","jiān","坚强"],["押","yā","押送"],["锁","suǒ","铁锁"],["遭","zāo","遭遇"],
+["恶","è","凶恶"],["愤","fèn","愤怒"],["措","cuò","措施"],["混","hùn","混乱"],["项","xiàng","项目"],["熄","xī","熄灭"],
+["塌","tā","倒塌"],["颂","sòng","歌颂"],["绩","jì","成绩"],["嗅","xiù","嗅觉"],["奈","nài","无奈"],["拯","zhěng","拯救"],
+["庞","páng","庞大"],["链","liàn","链条"],["攀","pān","攀登"],["辫","biàn","辫子"],["谓","wèi","所谓"],["拳","quán","拳头"],
+["捶","chuí","捶打"],["顽","wán","顽皮"],["襟","jīn","衣襟"],["膊","bó","胳膊"],["瓶","píng","花瓶"],["怖","bù","恐怖"],
+["凭","píng","凭借"],["欺","qī","欺负"],["掐","qiā","掐花"],["羡","xiàn","羡慕"],["殷","yīn","殷切"],["霉","méi","发霉"],
+["亏","kuī","吃亏"],["哄","hōng","哄笑"],["拙","zhuō","笨拙"],["砸","zá","砸碎"],["兵","bīng","士兵"],["恨","hèn","仇恨"],
+["帅","shuài","元帅"],["溃","kuì","溃败"],["誉","yù","荣誉"],["豪","háo","自豪"],["塞","sài","塞外"],["秦","qín","秦朝"],
+["征","zhēng","长征"],["杰","jié","杰出"],["崛","jué","崛起"],["范","fàn","模范"],["晰","xī","清晰"],["效","xiào","效果"],
+["淮","huái","淮河"],["惑","huò","疑惑"],["惩","chéng","惩罚"],["斥","chì","斥责"],["蓄","xù","储蓄"],["迫","pò","迫使"],
+["租","zū","房租"],["纠","jiū","纠正"],["缠","chán","缠绕"],["邀","yāo","邀请"],["扰","rǎo","打扰"],["拒","jù","拒绝"],
+["签","qiān","签名"],["订","dìng","订购"],["妄","wàng","妄想"],["延","yán","延迟"],["昔","xī","昔日"],["茅","máo","茅屋"],
+["炕","kàng","火炕"],["媚","mèi","明媚"],["戎","róng","戎装"],["诸","zhū","诸多"],["竞","jìng","竞争"],["唯","wéi","唯一"],
+["豹","bào","豹子"],["娶","qǔ","娶亲"],["媳","xí","媳妇"],["巫","wū","巫师"],["旱","hàn","干旱"],["徒","tú","徒弟"],
+["磕","kē","磕头"],["凿","záo","开凿"],["溉","gài","灌溉"],["拜","bài","拜年"],["侯","hóu","王侯"],["肤","fū","皮肤"],
+["剂","jì","药剂"],["髓","suǐ","骨髓"],["纪","jì","纪念"],["标","biāo","标准"],["杂","zá","杂草"],["篱","lí","篱笆"],
+["疏","shū","稀疏"],["锄","chú","锄头"],["剥","bō","剥开"],["构","gòu","构造"],["冠","guān","鸡冠"],["朴","pǔ","朴素"],
+["素","sù","朴素"],["率","lǜ","效率"],["倘","tǎng","倘若"],["附","fù","附近"],["捣","dǎo","捣乱"],["绘","huì","绘画"],
+["谐","xié","和谐"],["慰","wèi","安慰"],["藉","jiè","慰藉"],["绮","qǐ","绮丽"],["琥","hǔ","琥珀"],["珀","pò","琥珀"],
+["脂","zhī","脂肪"],["拭","shì","擦拭"],["渗","shèn","渗透"],["俯","fǔ","俯身"],["番","fān","一番"],["埋","mái","埋藏"],
+["澎","péng","澎湃"],["湃","pài","澎湃"],["钝","dùn","迟钝"],["仅","jǐn","仅仅"],["描","miáo","描绘"],["隧","suì","隧道"],
+["衍","yǎn","繁衍"],["吨","dūn","一吨"],["颅","lú","头颅"],["膨","péng","膨胀"],["捷","jié","敏捷"],["栖","qī","栖息"],
+["辟","pì","开辟"],["崭","zhǎn","崭新"],["乒","pīng","乒乓"],["乓","pāng","乒乓"],["拥","yōng","拥抱"],["菌","jūn","细菌"],
+["臭","chòu","臭味"],["蔬","shū","蔬菜"],["碳","tàn","低碳"],["癌","ái","癌症"],["症","zhèng","病症"],["疾","jí","疾病"],
+["灶","zào","灶台"],["揽","lǎn","揽住"],["驱","qū","驱赶"],["践","jiàn","实践"],["党","dǎng","党员"],["施","shī","施工"],
+["懈","xiè","松懈"],["宛","wǎn","宛如"],["碑","bēi","石碑"],["涛","tāo","波涛"],["叉","chā","叉子"],["绣","xiù","绣花"],
+["潇","xiāo","潇洒"],["绽","zhàn","绽放"],["朦","méng","朦胧"],["胧","lóng","朦胧"],["晖","huī","余晖"],["徜","cháng","徜徉"],
+["徉","yáng","徜徉"],["炫","xuàn","炫耀"],["垢","gòu","污垢"],["怯","qiè","胆怯"],["曝","pù","曝晒"],["涉","shè","涉及"],
+["晕","yūn","头晕"],["虑","lǜ","考虑"],["职","zhí","职业"],["蹭","cèng","蹭饭"],["稿","gǎo","草稿"],["殃","yāng","遭殃"],
+["瘩","da","疙瘩"],["聋","lóng","聋哑"],["啄","zhuó","啄木鸟"],["啼","tí","啼叫"],["凄","qī","凄惨"],["嚣","xiāo","嚣张"],
+["吭","kēng","吭声"],["吠","fèi","狂吠"],["颇","pō","颇好"],["奢","shē","奢侈"],["侈","chǐ","奢侈"],["苟","gǒu","一丝不苟"],
+["侍","shì","侍候"],["窥","kuī","窥视"],["伺","sì","伺候"],["供","gōng","供应"],["刹","chà","刹那"],["镶","xiāng","镶嵌"],
+["浙","zhè","浙江"],["簇","cù","一簇"],["臀","tún","臀部"],["漆","qī","油漆"],["婉","wǎn","婉转"],["蜒","yán","蜿蜒"],
+["晋","jìn","晋朝"],["絮","xù","柳絮"],["扭","niǔ","扭动"],["塞","sāi","塞子"],["呜","wū","呜咽"],["哇","wā","哇哇"],
+["糠","kāng","米糠"],["栓","shuān","枪栓"],["捆","kǔn","捆绑"],["绑","bǎng","绑扎"],["劫","jié","抢劫"],["毙","bì","枪毙"],
+["扒","bā","扒开"],["徽","huī","国徽"],["谜","mí","谜语"],["唇","chún","嘴唇"],["荤","hūn","荤菜"],["倔","jué","倔强"],
+["嘱","zhǔ","嘱咐"],["咐","fù","嘱咐"],["沮","jǔ","沮丧"],["绪","xù","头绪"],["嘹","liáo","嘹亮"],["廓","kuò","轮廓"],
+["搓","cuō","搓洗"],["葵","kuí","葵花"],["祈","qí","祈祷"],["遗","yí","遗憾"],["憾","hàn","遗憾"],["屑","xiè","木屑"],
+["蓉","róng","芙蓉"],["洛","luò","洛阳"],["砚","yàn","砚台"],["乾","qián","乾坤"],["坤","kūn","乾坤"],["恭","gōng","恭敬"],
+["勤","qín","勤劳"],["焉","yān","焉能"],["卒","zú","士卒"],["弥","mí","弥漫"],["剖","pōu","剖析"],["裸","luǒ","裸露"],
+["泣","qì","哭泣"],["汹","xiōng","汹涌"],["维","wéi","维护"],["酣","hān","酣睡"],["械","xiè","机械"],["卑","bēi","卑微"],
+["岗","gǎng","岗位"],["宰","zǎi","宰杀"],["遣","qiǎn","派遣"],["役","yì","战役"],["屡","lǚ","屡次"],["摧","cuī","摧毁"],
+["雹","báo","冰雹"],["膛","táng","胸膛"],["妖","yāo","妖怪"],["矩","jǔ","规矩"],["乖","guāi","乖巧"],["撵","niǎn","撵走"],
+["瘦","shòu","瘦小"],["硕","shuò","硕大"],["允","yǔn","允许"],["砌","qì","砌墙"],["覆","fù","覆盖"],["啸","xiào","呼啸"],
+["缕","lǚ","一缕"],["搂","lǒu","搂抱"],["颊","jiá","脸颊"],["港","gǎng","港口"],["宴","yàn","宴会"],["睫","jié","睫毛"],
+["婚","hūn","结婚"],["讯","xùn","通讯"],["挽","wǎn","挽留"],["圣","shèng","神圣"],["仪","yí","礼仪"],["帜","zhì","旗帜"],
+["垫","diàn","垫子"],["恒","héng","永恒"],["抚","fǔ","抚摸"]
+],
+5:[
+["鹭","lù","白鹭"],["嫌","xián","嫌弃"],["黛","dài","黛色"],["嵌","qiàn","镶嵌"],["匣","xiá","匣子"],["嗜","shì","嗜好"],
+["亩","mǔ","一亩"],["吩","fēn","吩咐"],["榨","zhà","榨油"],["榴","liú","石榴"],["矮","ǎi","矮小"],["箩","luó","箩筐"],
+["杭","háng","杭州"],["蔓","màn","蔓延"],["幽","yōu","幽静"],["悉","xī","熟悉"],["雏","chú","雏鹰"],["柜","guì","柜子"],
+["享","xiǎng","享受"],["陪","péi","陪伴"],["待","dài","等待"],["趴","pā","趴下"],["睑","jiǎn","眼睑"],["眸","móu","眼眸"],
+["汛","xùn","汛期"],["谴","qiǎn","谴责"],["惰","duò","懒惰"],["衡","héng","平衡"],["协","xié","协作"],["绰","chuò","绰号"],
+["璧","bì","璧玉"],["臣","chén","大臣"],["蔺","lìn","蔺相如"],["诺","nuò","承诺"],["罪","zuì","犯罪"],["廉","lián","廉洁"],
+["抵","dǐ","抵挡"],["御","yù","抵御"],["辞","cí","辞职"],["辱","rǔ","耻辱"],["擅","shàn","擅长"],["卿","qīng","爱卿"],
+["袍","páo","长袍"],["鸵","tuó","鸵鸟"],["冠","guàn","冠军"],["瀚","hàn","浩瀚"],["侵","qīn","侵略"],["略","lüè","策略"],
+["垒","lěi","堡垒"],["丘","qiū","山丘"],["搁","gē","搁置"],["陷","xiàn","陷阱"],["拐","guǎi","拐弯"],["岔","chà","岔路"],
+["酬","chóu","报酬"],["誓","shì","发誓"],["谎","huǎng","谎言"],["牺","xī","牺牲"],["嫂","sǎo","嫂子"],["恳","kěn","恳求"],
+["筛","shāi","筛选"],["歹","dǎi","好歹"],["罕","hǎn","罕见"],["梭","suō","穿梭"],["狱","yù","监狱"],["酿","niàng","酿造"],
+["瞌","kē","瞌睡"],["拘","jū","拘留"],["俭","jiǎn","节俭"],["皇","huáng","皇帝"],["偎","wēi","依偎"],["衰","shuāi","衰弱"],
+["泰","tài","泰山"],["瑚","hú","珊瑚"],["礁","jiāo","礁石"],["筐","kuāng","箩筐"],["拗","niù","执拗"],["熏","xūn","熏烟"],
+["恃","shì","有恃无恐"],["擞","sǒu","抖擞"],["泻","xiè","倾泻"],["鳞","lín","鱼鳞"],["惶","huáng","惶恐"],["胎","tāi","胎儿"],
+["履","lǚ","步履"],["估","gū","估计"],["煌","huáng","辉煌"],["殿","diàn","宫殿"],["珑","lóng","玲珑"],["剔","tī","挑剔"],
+["澜","lán","波澜"],["陵","líng","陵墓"],["宏","hóng","宏伟"],["奉","fèng","奉献"],["烬","jìn","灰烬"],["域","yù","领域"],
+["艇","tǐng","游艇"],["盾","dùn","盾牌"],["筷","kuài","筷子"],["炊","chuī","炊烟"],["喉","hóu","喉咙"],["咙","lóng","喉咙"],
+["勺","sháo","勺子"],["搅","jiǎo","搅拌"],["舀","yǎo","舀水"],["摄","shè","摄影"],["殖","zhí","繁殖"],["疗","liáo","治疗"],
+["驯","xùn","驯服"],["矫","jiǎo","矫正"],["杈","chā","树杈"],["藓","xiǎn","苔藓"],["狭","xiá","狭窄"],["勉","miǎn","勉励"],
+["锥","zhuī","锥子"],["魄","pò","气魄"],["抑","yì","压抑"],["颓","tuí","颓废"],["纫","rèn","缝纫"],["噪","zào","噪音"],
+["褐","hè","褐色"],["惫","bèi","疲惫"],["耽","dān","耽误"],["兜","dōu","裤兜"],["权","quán","权利"],["茧","jiǎn","蚕茧"],
+["栈","zhàn","客栈"],["冤","yuān","冤枉"],["枉","wǎng","冤枉"],["惚","hū","恍惚"],["跷","qiāo","跷跷板"],["僻","pì","偏僻"],
+["迪","dí","启迪"],["嫁","jià","嫁妆"],["缴","jiǎo","缴获"],["榜","bǎng","榜样"],["兼","jiān","兼职"],["嘲","cháo","嘲笑"],
+["枕","zhěn","枕头"],["誊","téng","誊写"],["励","lì","鼓励"],["版","bǎn","出版"],["祥","xiáng","吉祥"],["歧","qí","歧途"],
+["谨","jǐn","谨慎"],["榆","yú","榆树"],["畔","pàn","湖畔"],["聒","guō","聒噪"],["旷","kuàng","旷野"],["怡","yí","心旷神怡"],
+["凛","lǐn","凛冽"],["冽","liè","凛冽"],["逸","yì","安逸"],["桨","jiǎng","船桨"],["桩","zhuāng","木桩"],["暇","xiá","闲暇"],
+["袅","niǎo","袅袅"],["娥","é","嫦娥"],["妒","dù","嫉妒"],["瓷","cí","陶瓷"],["耻","chǐ","羞耻"],["矣","yǐ","悔之晚矣"],
+["岂","qǐ","岂敢"],["舅","jiù","舅舅"],["斩","zhǎn","斩断"],["凯","kǎi","凯旋"],["葛","gé","葛藤"],["浒","hǔ","水浒传"],
+["鲁","lǔ","鲁莽"],["寇","kòu","敌寇"],["刊","kān","书刊"],["琐","suǒ","琐碎"],["栩","xǔ","栩栩如生"],["呻","shēn","呻吟"],
+["喻","yù","比喻"],["瘾","yǐn","上瘾"],["籍","jí","书籍"],["饥","jī","饥饿"],["偿","cháng","偿还"],["甸","diàn","草甸"],
+["馈","kuì","馈赠"],["磁","cí","磁铁"],["酵","jiào","发酵"],["鉴","jiàn","借鉴"],["沥","lì","沥水"],["昼","zhòu","白昼"],
+["耘","yún","耕耘"],["稚","zhì","幼稚"],["漪","yī","涟漪"],["蚱","zhà","蚂蚱"],["啃","kěn","啃食"],["樱","yīng","樱桃"],
+["蚌","bàng","蚌壳"],["割","gē","割草"],["嘟","dū","嘟嘴"],["倭","wō","倭寇"],["拴","shuān","拴住"],["逛","guàng","逛街"],
+["徊","huái","徘徊"],["渺","miǎo","渺小"],["篝","gōu","篝火"],["萌","méng","萌发"],["澄","chéng","澄清"],["澈","chè","清澈"],
+["旖","yǐ","旖旎"],["旎","nǐ","旖旎"],["瑞","ruì","瑞雪"],["莱","lái","蓬莱"],["垠","yín","无垠"],["顷","qǐng","公顷"],
+["峨","é","巍峨"],["缀","zhuì","点缀"],["葬","zàng","埋葬"],["腮","sāi","腮帮"],["虬","qiú","虬枝"],["玷","diàn","玷污"],
+["郑","zhèng","郑重"],["秉","bǐng","秉承"],["飕","sōu","飕飕"],["码","mǎ","码头"],["撩","liáo","撩拨"],["绢","juàn","手绢"],
+["侨","qiáo","华侨"],["眷","juàn","眷恋"],["瑜","yú","瑜伽"],["忌","jì","忌讳"],["督","dū","监督"],["幔","màn","幔布"],
+["寨","zhài","山寨"],["擂","léi","擂鼓"],["呐","nà","呐喊"],["弩","nǔ","弩箭"],["丞","chéng","丞相"],["倚","yǐ","倚靠"],
+["箸","zhù","箸子"],["碟","dié","碟子"],["斤","jīn","公斤"],["俺","ǎn","俺们"],["杖","zhàng","拐杖"],["擒","qín","擒拿"],
+["勿","wù","勿动"],["肋","lèi","肋骨"],["跄","qiàng","踉跄"],["胯","kuà","胯下"],["霹","pī","霹雳"],["雳","lì","霹雳"],
+["咆","páo","咆哮"],["哮","xiào","咆哮"],["锤","chuí","铁锤"],["泊","bó","停泊"],["芝","zhī","芝麻"],["遂","suì","未遂"],
+["迸","bèng","迸发"],["涧","jiàn","山涧"],["獐","zhāng","獐子"],["猕","mí","猕猴"],["猿","yuán","猿猴"],["耶","yē","耶路撒冷"],
+["挈","qiè","挈带"],["瞑","míng","瞑目"],["窍","qiào","窍门"],["楷","kǎi","楷书"],["镌","juān","镌刻"],["挠","náo","阻挠"],
+["劣","liè","恶劣"],["恰","qià","恰好"],["屉","tì","抽屉"],["嫣","yān","嫣然"],["讳","huì","忌讳"],["晦","huì","隐晦"],
+["墩","dūn","土墩"],["钗","chāi","钗子"],["敞","chǎng","敞开"],["雯","wén","雯雯"],["袭","xí","袭击"],["仞","rèn","万仞"],
+["岳","yuè","岳父"],["蓟","jì","蓟州"],["涕","tì","鼻涕"],["裳","shang","衣裳"],["襄","xiāng","襄阳"],["彭","péng","姓彭"],
+["拟","nǐ","拟定"],["谋","móu","计谋"],["赴","fù","奔赴"],["殊","shū","特殊"],["踌","chóu","踌躇"],["躇","chú","踌躇"],
+["黯","àn","黯淡"],["革","gé","皮革"],["沃","wò","肥沃"],["匪","fěi","土匪"],["绷","bēng","绷带"],["衷","zhōng","衷心"],
+["堪","kān","不堪"],["筹","chóu","筹备"],["矜","jīn","矜持"],["俘","fú","俘虏"],["镯","zhuó","手镯"],["裆","dāng","裤裆"],
+["企","qǐ","企鹅"],["彼","bǐ","彼此"],["褂","guà","褂子"],["坞","wù","船坞"],["嘎","gā","嘎嘎"],["绊","bàn","绊倒"],
+["揪","jiū","揪住"],["扳","bān","扳手"],["腕","wàn","手腕"],["铸","zhù","铸造"],["颧","quán","颧骨"],["疤","bā","伤疤"],
+["监","jiān","监督"],["侄","zhí","侄子"],["痰","tán","吐痰"],["揩","kāi","揩油"],["浆","jiāng","豆浆"],["傅","fù","师傅"],
+["袱","fú","包袱"],["蘸","zhàn","蘸水"],["馅","xiàn","馅饼"],["诈","zhà","诈骗"],["怔","zhèng","发怔"],["吾","wú","吾辈"],
+["弗","fú","弗如"],["夫","fū","农夫"],["策","cè","策略"],["荐","jiàn","推荐"],["肆","sì","放肆"],["桅","wéi","桅杆"],
+["撕","sī","撕开"],["唬","hǔ","吓唬"],["龇","zī","龇牙"],["咧","liě","咧嘴"],["瞄","miáo","瞄准"],["尼","ní","尼姑"],
+["艄","shāo","船艄"],["翘","qiào","翘起"],["姆","mǔ","保姆"],["祷","dǎo","祈祷"],["雇","gù","雇佣"],["哗","huá","喧哗"],
+["毡","zhān","毡帽"],["犊","dú","牛犊"],["眺","tiào","眺望"],["膘","biāo","长膘"],["驰","chí","奔驰"],["爵","jué","爵士"],
+["噜","lū","咕噜"],["吆","yāo","吆喝"],["哞","mōu","哞哞"],["畜","chù","牲畜"],["译","yì","翻译"],["愧","kuì","惭愧"],
+["熠","yì","熠熠生辉"],["遐","xiá","遐想"],["黏","nián","黏土"],["刃","rèn","刀刃"],["埃","āi","尘埃"],["滥","làn","泛滥"],
+["淤","yū","淤泥"],["湛","zhàn","湛蓝"],["诣","yì","造诣"],["禽","qín","家禽"],["拇","mǔ","拇指"],["弦","xián","琴弦"],
+["揿","qìn","揿按"],["搔","sāo","搔痒"],["窈","yǎo","窈窕"],["窕","tiǎo","窈窕"],["秽","huì","污秽"],["轧","yà","轧道"],
+["拧","nǐng","拧开"],["纽","niǔ","纽扣"],["仓","cāng","仓库"],["薄","bó","薄弱"],["庸","yōng","平庸"],["憎","zēng","憎恨"],
+["胚","pēi","胚胎"],["祸","huò","祸害"],["患","huàn","患病"],["赋","fù","赋予"],["痴","chī","痴迷"],["绞","jiǎo","绞索"],
+["嘿","hēi","嘿嘿"],["伊","yī","伊始"],["娜","nà","娜娜"],["窘","jiǒng","窘迫"]
+],
+6:[
+["蕴","yùn","蕴含"],["凝","níng","凝聚"],["挚","zhì","真挚"],["憧","chōng","憧憬"],["憬","jǐng","憧憬"],["毅","yì","毅力"],
+["抑","yì","压抑"],["湛","zhàn","湛蓝"],["瀚","hàn","浩瀚"],["澈","chè","清澈"],["澜","lán","波澜"],["凛","lǐn","凛冽"],
+["冽","liè","凛冽"],["勘","kān","勘探"],["莽","mǎng","莽撞"],["屹","yì","屹立"],["磊","lěi","磊落"],["铭","míng","铭记"],
+["琢","zhuó","雕琢"],["擎","qíng","擎天"],["御","yù","抵御"],["懊","ào","懊悔"],["颓","tuí","颓废"],["绚","xuàn","绚丽"],
+["璨","càn","璀璨"],["歧","qí","歧途"],["骋","chěng","驰骋"],["飙","biāo","狂飙"],["鸿","hóng","鸿雁"],["鹄","hú","鸿鹄"],
+["烽","fēng","烽火"],["舷","xián","舷窗"],["舵","duò","舵手"],["桅","wéi","桅杆"],["缆","lǎn","缆绳"],["锚","máo","抛锚"],
+["潺","chán","潺潺"],["萦","yíng","萦绕"],["袅","niǎo","袅袅"],["谐","xié","和谐"],["冗","rǒng","冗长"],["儒","rú","儒家"],
+["藐","miǎo","藐视"],["拭","shì","擦拭"],["惬","qiè","惬意"],["跚","shān","蹒跚"],["涛","tāo","波涛"],["滔","tāo","滔滔"],
+["汹","xiōng","汹涌"],["湃","pài","澎湃"],["澎","péng","澎湃"],["嶙","lín","嶙峋"],["峋","xún","嶙峋"],["嵯","cuó","嵯峨"],
+["峨","é","巍峨"],["巍","wēi","巍峨"],["旖","yǐ","旖旎"],["旎","nǐ","旖旎"],["馥","fù","馥郁"],["缭","liáo","缭绕"],
+["飒","sà","飒爽"],["婀","ē","婀娜"],["娜","nuó","婀娜"],["翩","piān","翩翩"],["跹","xiān","翩跹"],["姹","chà","姹紫嫣红"],
+["嫣","yān","嫣红"],["氤","yīn","氤氲"],["氲","yūn","氤氲"],["霁","jì","雨霁"],["澄","chéng","澄清"],["漾","yàng","荡漾"],
+["漪","yī","涟漪"],["涟","lián","涟漪"],["粼","lín","粼粼"],["淙","cóng","淙淙"],["憩","qì","小憩"],["磐","pán","磐石"],
+["砾","lì","瓦砾"],["铄","shuò","铄金"],["怆","chuàng","悲怆"],["悱","fěi","悱恻"],["恻","cè","恻隐"],["怦","pēng","怦怦"],
+["耽","dān","耽搁"],["踌","chóu","踌躇"],["躇","chú","踌躇"],["桀","jié","桀骜"],["骜","ào","桀骜"],["骁","xiāo","骁勇"],
+["隘","ài","狭隘"],["涸","hé","干涸"],["栖","qī","栖息"]
+]
+};
+// __DATA_GRADES__
+
+/* 六年级超纲字库（初中常用字，用于高关卡挑战） */
+const EXTRA6=[
+["遨","áo","遨游"],["跋","bá","跋涉"],["颁","bān","颁布"],["瓣","bàn","花瓣"],["濒","bīn","濒临"],["沧","cāng","沧海"],
+["储","chǔ","储备"],["缔","dì","缔造"],["锻","duàn","锻炼"],["骇","hài","惊骇"],["豁","huò","豁达"],["羁","jī","羁绊"],
+["诫","jiè","告诫"],["吝","lìn","吝啬"],["曼","màn","曼妙"],["糜","mí","糜烂"],["谬","miù","谬误"],["匿","nì","匿名"],
+["磅","páng","磅礴"],["礴","bó","磅礴"],["崎","qí","崎岖"],["岖","qū","崎岖"],["虔","qián","虔诚"],["纤","xiān","纤细"],
+["瞻","zhān","瞻仰"],["沼","zhǎo","沼泽"],["滞","zhì","停滞"],["卓","zhuó","卓越"],["骼","gé","骨骼"],["踝","huái","脚踝"],
+["麓","lù","山麓"],["觅","mì","寻觅"],["抨","pēng","抨击"],["庇","bì","庇护"],["馨","xīn","温馨"],["蠕","rú","蠕动"],
+["筏","fá","木筏"],["湍","tuān","湍急"],["诡","guǐ","诡计"],["蔚","wèi","蔚蓝"]
+];
+// __DATA_GRADES__
+
+
+/* 成语：每年级 bank(知识库) + chains(可接龙的链) */
+// __DATA_CHENYU__
+const CHENYU={
+1:{bank:["欢声雷动","欣喜若狂","载歌载舞","灯火辉煌","春暖花开","春色满园","春光明媚","春意盎然","精卫填海","愚公移山","百折不回","勇往直前","骨肉之情","痛痒相关","情深似海","恩重如山","循序渐进","由浅入深","日积月累","温故知新","漫山遍野","绿树成荫","天长日久","树大根深","人无远虑","必有近忧","有备无患","防患未然","临危不惧","多谋善断","从容不迫","方寸不乱"],
+ chains:[
+["一心一意","意气风发","发扬光大","大同小异","异口同声","声东击西"],
+["三心二意","意气用事","事在人为","为人师表","表里如一","一心一意","意气风发"],
+["春暖花开","开门见山","山清水秀","秀外慧中","中流砥柱","助人为乐","乐善好施"],
+["一马当先","先人后己","己所不欲","欲速则不达","达官贵人","人才辈出","出生入死","死而后已","以一当十","十全十美"],
+["万紫千红","红光满面","面面俱到","道听途说","说三道四","四面八方"],
+["天长日久","久别重逢","逢凶化吉","吉人天相","相貌堂堂","堂堂正正","正大光明"],
+["欢天喜地","地大物博","博古通今","今非昔比","比比皆是","是非曲直","直截了当","当仁不让"],
+["百折不回","回心转意","意气风发","发愤图强","强词夺理","理直气壮","壮志凌云"]
+]},
+2:{bank:["金风送爽","雁过留声","秋色宜人","天朗气清","日月如梭","光阴似箭","寒来暑往","星移物换","风吹草动","雨过天晴","瓜熟蒂落","水到渠成","人外有人","天外有天","学无止境","一往无前","滴水成冰","地冻天寒","鹅毛大雪","雪兆丰年","勤能补拙","笨鸟先飞","人一己百","奋起直追","宁折不弯","义正辞严","威武不屈","大义凛然","火树银花","数不胜数","灯火通明","观者如堵","张灯结彩","欢聚一堂","普天同庆","喜气洋洋","百花盛开","争奇斗艳","五彩缤纷","色色俱全","跋山涉水","餐风饮露","水送山迎","赏心悦目","舐犊之爱","乌鸟私情","天伦之乐","其乐无穷","摩拳擦掌","生龙活虎","身强力壮","铜筋铁骨","莘莘学子","立雪求道","春风化雨","孺子可教","感人肺腑","可歌可泣","艰苦卓绝","惊天动地","披星戴月","流星赶月","众星捧月","烘云托月"],
+ chains:[
+["秋色宜人","人山人海","海阔天空","空前绝后","后来居上","上善若水","水落石出","出生入死","死里逃生","生龙活虎"],
+["日月如梭","缩头缩脑","恼羞成怒","怒气冲冲","冲锋陷阵","镇定自若","若有所思"],
+["光阴似箭","见多识广","广开言路","路不拾遗","遗臭万年","年富力强","强弩之末"],
+["寒来暑往","网开一面","面面俱到","道听途说","说三道四","四面八方","方兴未艾"],
+["风吹草动","动人心弦","弦外之音","音容笑貌","貌合神离","离群索居","居安思危","危在旦夕"],
+["雨过天晴","情同手足","足智多谋","谋事在人","人定胜天","天经地义","义不容辞","辞旧迎新"],
+["学无止境","境由心生","生气勃勃","勃勃生机","机不可失","失而复得","得心应手","手忙脚乱"],
+["一往无前","前所未有","有志竟成","成竹在胸","胸怀大志","志同道合","和盘托出"]
+]},
+3:{bank:["大雨滂沱","夕阳西下","一帆风顺","草长莺飞","连绵不断","湖光山色","根深本固","浇树浇根","根深叶茂","叶落归根","高堂广厦","玉宇琼楼","错落有致","曲径通幽","千岩竞秀","万壑争流","目不暇接","美不胜收","雏鹰展翅","老马识途","鱼贯而入","倾巢而出","鸡飞狗跳","狼奔豕突","群龙无首","狡兔三窟","忍辱负重","以屈求伸","奋发图强","救亡图存","卧薪尝胆","催人奋进","羽翼丰满","报仇雪恨","大街小巷","人头攒动","风驰电掣","车水马龙","华灯初上","流光溢彩","美轮美奂","巧夺天工","和风细雨","春风化雨","呼风唤雨","栉风沐雨","凄风苦雨","暴风骤雨","戎马一生","身经百战","刮骨疗毒","传为美谈","约法三章","秋毫无犯","运筹帷幄","好谋善断","学海无涯","书山有路","九牛一毛","沧海一粟","孜孜以求","全力以赴","百尺竿头","更进一步","气象万千","风云变幻","奇峰异岭","若隐若现","腾云驾雾","飘飘欲仙","白云苍狗","瞬息万变","有利可图","有机可乘","有根有底","有始有终","有口难言","有恃无恐","有求必应","有志竟成","风华正茂","出类拔萃","才思敏捷","后生可畏","文思如泉","手不停挥","笔下生花","力透纸背","精妙绝伦","炉火纯青","活灵活现","栩栩如生","斗酒百篇","鬼斧神工","梦笔生花","浑然天成","沙漠之舟","自强不息","始终如一","飞沙走石","志在千里","义无反顾","坚定不移","坐观成败","按兵不动","操之过急","轻举妄动","兴风作浪","蠢蠢欲动","雷厉风行","闻风而动","烟波浩渺","一碧万顷","游人如织","谈笑风生","风平浪静","海波不惊","揠苗助长","杯弓蛇影","螳螂捕蝉","鹬蚌相争","郑人买履","叶公好龙","狐假虎威","黔驴技穷"],
+ chains:[
+["湖光山色","色厉内荏","忍辱负重","众志成城","城门失火","火冒三丈","仗义执言"],
+["目不暇接","接二连三","三心二意","意气风发","发扬光大","大同小异","异口同声"],
+["叶落归根","根深叶茂","茂林修竹","竹报平安","安居乐业","业精于勤","勤能补拙"],
+["车水马龙","龙腾虎跃","跃跃欲试","事不宜迟","持之以恒","横行霸道","道听途说","说三道四","四海为家"],
+["风和日丽","力不从心","心花怒放","放虎归山","山清水秀","秀色可餐","餐风露宿"],
+["一帆风顺","顺水推舟","舟车劳顿","顿开茅塞","色厉内荏","忍辱负重","众志成城","城门失火","火冒三丈","仗义执言"],
+["春华秋实","实事求是","是非分明","明察秋毫","毫无二致","志同道合","和而不同"],
+["闻名遐迩","耳聪目明","明察秋毫","毫无二致","志在千里","里应外合","和颜悦色"]
+]},
+4:{bank:["文思敏捷","聪明过人","青出于蓝","一鸣惊人","桃李争妍","后继有人","十年树木","百年树人","以身许国","碧血丹心","疾恶如仇","大义灭亲","敢怒敢言","忧国忧民","横眉冷对","浩气长存","人间天堂","明月清风","桂子飘香","水光接天","相得益彰","山水如画","鱼米之乡","混沌不分","昏天黑地","大刀阔斧","开天辟地","与日俱增","顶天立地","变化万端","改天换地","学富五车","满腹经纶","学贯中西","博古通今","功成名就","著作等身","温文尔雅","文质彬彬","肝胆相照","开诚相见","同舟共济","心照不宣","志同道合","亲密无间","荣辱与共","唇亡齿寒","春满人间","欣欣向荣","千帆竞发","万马奔腾","六畜兴旺","五谷丰登","国泰民安","人寿年丰","春深似海","风月无边","世外桃源","山外有山","飞瀑流泉","古木参天","诗情画意","蔚为壮观","浅尝辄止","囫囵吞枣","浮光掠影","不甚了了","天道酬勤","熟能生巧","寻根问底","无所不能","初出茅庐","才华横溢","料事如神","胆大心细","鞠躬尽瘁","死而后已","独木难支","回天无力","白衣天使","玉洁冰清","救死扶伤","处变不惊","万众一心","众志成城","含辛茹苦","舍生忘死","倦鸟知还","成群结队","一唱一和","呼朋引伴","欢呼雀跃","如痴如醉","夜深人静","昏昏欲睡","欲言又止","吞吞吐吐","闪烁其词","支支吾吾","口若悬河","妙语连珠","高谈阔论","眉飞色舞","继往开来","革故鼎新","一衣带水","以德为邻","唯才是举","知人善任","科教兴国","与时俱进"],
+ chains:[
+["开天辟地","地大物博","博古通今","今非昔比","比翼双飞","飞黄腾达","达官贵人","人才济济"],
+["顶天立地","地动山摇","摇身一变","变化无穷","穷则思变","变本加厉","厉兵秣马","马到成功","功成名就","就事论事"],
+["星罗棋布","步步高升","升堂入室","誓不两立","立功赎罪","罪魁祸首","首屈一指","指日可待","待人接物"],
+["与日俱增","曾几何时","时不我待","待人接物","物美价廉","廉洁奉公","公正无私"],
+["学富五车","车水马龙","龙飞凤舞","舞文弄墨","墨守成规","规行矩步","步步为营","营私舞弊"],
+["满腹经纶","轮番上阵","镇定自若","若有所思","思前想后","后来居上"],
+["温文尔雅","雅俗共赏","赏心悦目","目不转睛","精益求精","求同存异","异想天开","开卷有益"],
+["出类拔萃","翠色欲流","流连忘返","返璞归真","真心实意","意气风发","发愤图强","强词夺理"]
+]},
+5:{bank:["娓娓动听","身临其境","戛然而止","引人入胜","恭恭敬敬","终生难忘","专心致志","坚忍不拔","五彩缤纷","满载而归","兴致勃勃","绘声绘色","名副其实","凶相毕露","指手画脚","金蝉脱壳","依依不舍","自相矛盾","张口结舌","滥竽充数","画龙点睛","张牙舞爪","惊叹不已","夜深人静","犹豫不决","长生不老","翻箱倒柜","迫不及待","皓月当空","树影婆娑","无能为力","惊慌失措","奔腾不息","震撼人心","水天一色","姹紫嫣红","轩然大波","不懈努力","刻舟求剑","守株待兔","螳臂当车","掩耳盗铃","买椟还珠","东施效颦","邯郸学步","情有独钟","饱经风霜","气势非凡","慈眉善目","威风凛凛","惟妙惟肖","精妙绝伦","啧啧赞叹","丰富多彩","翩翩起舞","断崖绝壁","宏伟瑰丽","冷嘲热讽","欣喜若狂","无稽之谈","安然无恙","不足为奇","混为一谈","怒发冲冠","博览群书","家徒四壁","下落不明","体弱多病","茶饭不思","奋笔疾书","名垂青史","荒山野岭","锲而不舍","滴水穿石","微不足道","持之以恒","翻山越岭","孜孜不倦","坚持不懈","炉火纯青","三心二意","半途而废","接连不断","气势汹汹","措手不及","繁花似锦","浩浩荡荡","脍炙人口","哀鸿遍野","妻离子散","逆来顺受","官逼民反","忍无可忍","逼上梁山","劫富济贫","铤而走险","兵来将挡","水来土掩","替天行道","志存高远","枝繁叶茂","青山碧岭","成千盈百","冰清玉洁","春色满园","寒风凛冽","数以百计","家常便饭","一模一样","紧急关头","濒临灭绝","风流潇洒","神采奕奕","风度翩翩","处之泰然","气宇轩昂","仪态万方","满面红光","相貌堂堂","落落大方","习以为常","有声有色","无边无际","前所未有","不分昼夜","如饥似渴","不屈不挠","树木葱茏","月光如银","月光似水","静影沉璧","恩重如山","升腾跌宕","势不可当","水波映月","动人心弦","享有盛誉","人山人海","扶老携幼","名扬海外","镇定自若","奋勇向前","化险为夷","严阵以待","狂风呼啸","波涛滚滚","悲愤交加","重于泰山","轻于鸿毛","前无古人","一目十行","走马观花","令出如山","惊涛骇浪","奇珍异宝","五洲四海","振臂一呼","水土不服","观风问俗","互通有无","心悦诚服","南征北战","所向披靡","昂首挺胸","跃跃欲试","神态各异","殊死拼搏","绝无仅有","举世无双","古今中外","若有所思","举世闻名","巍然屹立","山清水秀","风景如画","波光粼粼","街头巷尾","星罗棋布","金碧辉煌","成千上万","莫名其妙","蹑手蹑脚","不知不觉","豁然开朗","高深莫测","一塌糊涂","衣衫不整","出言不逊","头头是道","信口开河","理直气壮","胡编乱造","海阔天空","拾人牙慧","娓娓而谈","夸夸其谈","侃侃而谈","无所不谈","老生常谈","万水千山","燃眉之急","万分危急","日夜兼程","气壮山河","血肉之躯","伤痕累累","惊心动魄","铮铮铁汉","劈波斩浪","接天莲叶","晶莹闪烁","百鸟争鸣","呼朋引伴","情不自禁","一元复始","桃红柳绿","骄阳似火","金风送爽","风雪交加","岁月如流","万象更新","芳草如茵","大雨倾盆","万里无云","寒气袭人","一刻千金"],
+ chains:[
+["坚忍不拔","拔刀相助","助人为乐","乐此不疲","皮开肉绽","战无不胜","胜任愉快","快马加鞭"],
+["迫不及待","待价而沽","沽名钓誉","誉满天下","下笔成章","张冠李戴","戴月披星","星罗棋布"],
+["画龙点睛","惊心动魄","破釜沉舟","舟车劳顿","顿开茅塞","塞翁失马","马到成功","功成名就"],
+["守株待兔","兔死狐悲","悲欢离合","合二为一","一鸣惊人","人山人海","海阔天空","空前绝后"],
+["掩耳盗铃","灵机一动","动人心弦","弦外之音","音容宛在","在所不惜","惜墨如金","金蝉脱壳"],
+["自相矛盾","顿开茅塞","塞翁失马","马不停蹄","啼笑皆非","非同小可","可歌可泣"],
+["滥竽充数","数一数二","二话不说","说长道短","短兵相接","接踵而至","至理名言","言而有信"],
+["依依不舍","舍生取义","义不容辞","辞旧迎新","新陈代谢","谢天谢地","地久天长","长治久安"]
+]},
+6:{bank:["波澜壮阔","慷慨激昂","横行霸道","负隅顽抗","惊恐万状","乱作一团","喜出望外","街头巷尾","载歌载舞","悲愤欲绝","一腔热血","弥留之际","与世长辞","聚精会神","针锋相对","唇枪舌剑","寸步不让","若有所悟","老迈昏庸","深明大义","宽容大度","大公无私","腾空而起","血肉模糊","眼含热泪","绘声绘色","不可开交","井然有序","巍然屹立","阴森可怖","忠于职守","荒无人烟","天经地义","潸然泪下","嗷嗷待哺","成年累月","惴惴不安","大名鼎鼎","寥寥无几","节衣缩食","悲观退缩","孜孜不倦","争分夺秒","脱颖而出","顶礼膜拜","鸦雀无声","掌声雷动","神秘莫测","龙飞凤舞","爱不释手","心灵手巧","啧啧赞叹","无所不能","广结善缘","深入人心","有求必应","熟能生巧","有声有色","暴跳如雷","心急如焚","波涛汹涌","大起大落","元气淋漓","惊心动魄","戛然而止","望而生畏","广袤无垠","寸草不生","不可思议","铺天盖地","起死回生","名贯古今","婀娜多姿","风情万种","艰苦卓绝","襟飘带舞","悄无声息","漂泊不定","颠沛流离","繁衍后代","茁壮成长","销声匿迹","争先恐后","广阔无垠","水天一色","屈指一算","魂牵梦绕","悬崖峭壁","狂风怒号","赞叹不已","名门望族","无影无踪","五彩缤纷","日新月异","瞬息万变","能者为师","勤学好问","花开花落","相辅相成","九霄云外","惊天动地","形形色色","回肠荡气","息息相通","喜闻乐见","粉墨登场","锣鼓喧天","唱念做打","有板有眼","余音绕梁","字正腔圆","惟妙惟肖","活灵活现","感人肺腑","动人心弦","美妙绝伦","赤朱丹彤","悄然无声","气势汹汹","前赴后继","锲而不舍","蔚为壮观","崇山峻岭","如痴如醉","变化多端","蓄谋已久","恼羞成怒","同仇敌忾","人仰马翻","鬼哭狼嚎","抱头鼠窜","生死存亡","如火如荼","有始有终","救命之恩","寒冬腊月","北国风光","风刀霜剑","漫天飞舞","纷纷扬扬","银装素裹","雪上加霜","风卷残云","神清气爽","腾云驾雾","千变万化","大显神通","明察秋毫","火眼金睛","除恶务尽","无穷无尽","顾名思义","卓有成效","情不自禁","气喘吁吁","望而却步","半途而废","炯炯有神","如梦初醒","东张西望","错失良机","完好无损","水滴石穿","一心一意","感激涕零","百感交集","深思熟虑","匪夷所思","时光荏苒","白驹过隙","迷途知返","鉴往知来","莫衷一是","恍如隔世","迫不及待","生生不息","应有尽有","花团锦簇","美不胜收","万紫千红","毫不含糊","直截了当","一无所获","富丽堂皇","烈日炎炎","狂风暴雨","滔滔不绝","全神贯注","翩翩起舞","功德无量","桃红柳绿","波澜起伏","意味深长","奔流不息","司空见惯","温文尔雅","从容不迫","手舞足蹈","朝夕相处","绿草如茵","窗明几净","和蔼可亲","五彩斑斓","博大精深","学而不厌","苦心孤诣","闻过则喜","见贤思齐","有教无类","不偏不倚","诲人不倦","乐此不疲","托物言志","喻之以理","逝者如斯","川流不息"],
+ chains:[
+["波光粼粼","鳞次栉比","比比皆是","是非曲直","直抒胸臆","义愤填膺","鹰击长空","空前绝后"],
+["锲而不舍","舍生取义","义正辞严","严阵以待","戴罪立功","功成名就","就事论事","事在人为","为人师表","表里如一"],
+["崇山峻岭","领异标新","新陈代谢","谢天谢地","地动山摇","摇摇欲坠"],
+["赴汤蹈火","火中取栗","力挽狂澜","兰桂齐芳","方兴未艾","爱不释手","手不释卷","卷土重来","来之不易","异想天开"],
+["出类拔萃","翠色欲流","流芳百世","世外桃源","源远流长","长治久安","安居乐业","业精于勤","勤能补拙","捉襟见肘"],
+["日新月异","异口同声","声名鹊起","起死回生","生龙活虎","虎头蛇尾","尾大不掉","掉以轻心","心旷神怡"],
+["专心致志","志同道合","合二为一","一针见血","血口喷人","人杰地灵","灵机一动","动人心弦"],
+["乘风破浪","浪子回头","头头是道","道听途说","说三道四","四海为家","家喻户晓","晓以利害","害群之马","马到成功"]
+]}
+};
+const CHENYU_PIN={
+"一心一意":["yī","yì"],"意气风发":["yì","fā"],"发扬光大":["fā","dà"],"大同小异":["dà","yì"],"异口同声":["yì","shēng"],"声东击西":["shēng","xī"],"四面八方":["sì","fāng"],
+"三心二意":["sān","yì"],"意气用事":["yì","shì"],"事在人为":["shì","wéi"],"为人师表":["wéi","biǎo"],"表里如一":["biǎo","yī"],
+"春暖花开":["chūn","kāi"],"开门见山":["kāi","shān"],"山清水秀":["shān","xiù"],"秀外慧中":["xiù","zhōng"],"中流砥柱":["zhōng","zhù"],"助人为乐":["zhù","lè"],"乐善好施":["lè","shī"],
+"一马当先":["yī","xiān"],"先人后己":["xiān","jǐ"],"己所不欲":["jǐ","yù"],"欲速则不达":["yù","dá"],"达官贵人":["dá","rén"],"人才辈出":["rén","chū"],"出生入死":["chū","sǐ"],"死而后已":["sǐ","yǐ"],
+"万紫千红":["wàn","hóng"],"红光满面":["hóng","miàn"],"面面俱到":["miàn","dào"],"道听途说":["dào","shuō"],"说三道四":["shuō","sì"],
+"天长日久":["cháng","jiǔ"],"久别重逢":["jiǔ","féng"],"逢凶化吉":["féng","jí"],"吉人天相":["jí","xiàng"],"相貌堂堂":["xiàng","táng"],"堂堂正正":["táng","zhèng"],"正大光明":["zhèng","míng"],
+"欢天喜地":["huān","dì"],"地大物博":["dì","bó"],"博古通今":["bó","jīn"],"今非昔比":["jīn","bǐ"],"比比皆是":["bǐ","shì"],"是非曲直":["shì","zhí"],"直截了当":["zhí","dāng"],"当仁不让":["dāng","ràng"],
+"百折不回":["bǎi","huí"],"回心转意":["huí","yì"],"发愤图强":["fā","qiáng"],"强词夺理":["qiáng","lǐ"],"理直气壮":["lǐ","zhuàng"],"壮志凌云":["zhuàng","yún"],
+"秋色宜人":["qiū","rén"],"人山人海":["rén","hǎi"],"海阔天空":["hǎi","kōng"],"空前绝后":["kōng","hòu"],"后来居上":["hòu","shàng"],"上善若水":["shàng","shuǐ"],"水落石出":["shuǐ","chū"],"死里逃生":["sǐ","shēng"],"生龙活虎":["shēng","hǔ"],
+"日月如梭":["rì","suō"],"缩头缩脑":["suō","nǎo"],"恼羞成怒":["nǎo","nù"],"怒气冲冲":["nù","chōng"],"冲锋陷阵":["chōng","zhèn"],"镇定自若":["zhèn","ruò"],"若有所思":["ruò","sī"],
+"光阴似箭":["guāng","jiàn"],"见多识广":["jiàn","guǎng"],"广开言路":["guǎng","lù"],"路不拾遗":["lù","yí"],"遗臭万年":["yí","nián"],"年富力强":["nián","qiáng"],"强弩之末":["qiáng","mò"],
+"寒来暑往":["hán","wǎng"],"网开一面":["wǎng","miàn"],"方兴未艾":["fāng","ài"],
+"风吹草动":["fēng","dòng"],"动人心弦":["dòng","xián"],"弦外之音":["xián","yīn"],"音容笑貌":["yīn","mào"],"貌合神离":["mào","lí"],"离群索居":["lí","jū"],"居安思危":["jū","wēi"],"危在旦夕":["wēi","xī"],
+"雨过天晴":["yǔ","qíng"],"情同手足":["qíng","zú"],"足智多谋":["zú","móu"],"谋事在人":["móu","rén"],"人定胜天":["rén","tiān"],"天经地义":["tiān","yì"],"义不容辞":["yì","cí"],"辞旧迎新":["cí","xīn"],
+"学无止境":["xué","jìng"],"境由心生":["jìng","shēng"],"生气勃勃":["shēng","bó"],"勃勃生机":["bó","jī"],"机不可失":["jī","shī"],"失而复得":["shī","dé"],"得心应手":["dé","shǒu"],"手忙脚乱":["shǒu","luàn"],
+"一往无前":["yī","qián"],"前所未有":["qián","yǒu"],"有志竟成":["yǒu","chéng"],"成竹在胸":["chéng","xiōng"],"胸怀大志":["xiōng","zhì"],"志同道合":["zhì","hé"],"和盘托出":["hé","chū"],
+"湖光山色":["hú","sè"],"乐不思蜀":["lè","shǔ"],"数一数二":["shǔ","èr"],
+"目不暇接":["mù","jiē"],"接二连三":["jiē","sān"],
+"叶落归根":["yè","gēn"],"根深叶茂":["gēn","mào"],"茂林修竹":["mào","zhú"],"竹报平安":["zhú","ān"],"安居乐业":["ān","yè"],"业精于勤":["yè","qín"],"勤能补拙":["qín","zhuō"],
+"车水马龙":["chē","lóng"],"龙腾虎跃":["lóng","yuè"],"跃跃欲试":["yuè","shì"],"事不宜迟":["shì","chí"],"持之以恒":["chí","héng"],"横行霸道":["héng","dào"],"四海为家":["sì","jiā"],
+"风和日丽":["fēng","lì"],"力不从心":["lì","xīn"],"心花怒放":["xīn","fàng"],"放虎归山":["fàng","shān"],"秀色可餐":["xiù","cān"],"餐风露宿":["cān","sù"],
+"一帆风顺":["yī","shùn"],"顺水推舟":["shùn","zhōu"],"舟车劳顿":["zhōu","dùn"],"顿开茅塞":["dùn","sè"],"色厉内荏":["sè","rěn"],"忍辱负重":["rěn","zhòng"],"众志成城":["zhòng","chéng"],"城门失火":["chéng","huǒ"],"火冒三丈":["huǒ","zhàng"],"仗义执言":["zhàng","yán"],
+"春华秋实":["chūn","shí"],"实事求是":["shí","shì"],"是非分明":["shì","míng"],"明察秋毫":["míng","háo"],"毫无二致":["háo","zhì"],"和而不同":["hé","tóng"],
+"闻名遐迩":["wén","ěr"],"耳聪目明":["ěr","míng"],"志在千里":["zhì","lǐ"],"里应外合":["lǐ","hé"],"和颜悦色":["hé","sè"],
+"开天辟地":["kāi","dì"],"比翼双飞":["bǐ","fēi"],"飞黄腾达":["fēi","dá"],"人才济济":["rén","jǐ"],
+"顶天立地":["dǐng","dì"],"地动山摇":["dì","yáo"],"摇身一变":["yáo","biàn"],"变化无穷":["biàn","qióng"],"穷则思变":["qióng","biàn"],"变本加厉":["biàn","lì"],"厉兵秣马":["lì","mǎ"],"马到成功":["mǎ","gōng"],"功成名就":["gōng","jiù"],"就事论事":["jiù","shì"],
+"星罗棋布":["xīng","bù"],"步步高升":["bù","shēng"],"升堂入室":["shēng","shì"],"誓不两立":["shì","lì"],"立功赎罪":["lì","zuì"],"罪魁祸首":["zuì","shǒu"],"首屈一指":["shǒu","zhǐ"],"指日可待":["zhǐ","dài"],"待人接物":["dài","wù"],
+"与日俱增":["yǔ","zēng"],"曾几何时":["zēng","shí"],"时不我待":["shí","dài"],"物美价廉":["wù","lián"],"廉洁奉公":["lián","gōng"],"公正无私":["gōng","sī"],
+"学富五车":["xué","chē"],"龙飞凤舞":["lóng","wǔ"],"舞文弄墨":["wǔ","mò"],"墨守成规":["mò","guī"],"规行矩步":["guī","bù"],"步步为营":["bù","yíng"],"营私舞弊":["yíng","bì"],
+"满腹经纶":["mǎn","lún"],"轮番上阵":["lún","zhèn"],"思前想后":["sī","hòu"],
+"温文尔雅":["wēn","yǎ"],"雅俗共赏":["yǎ","shǎng"],"赏心悦目":["shǎng","mù"],"目不转睛":["mù","jīng"],"精益求精":["jīng","qiú"],"求同存异":["qiú","yì"],"异想天开":["yì","kāi"],"开卷有益":["kāi","yì"],
+"出类拔萃":["chū","cuì"],"翠色欲流":["cuì","liú"],"流连忘返":["liú","fǎn"],"返璞归真":["fǎn","zhēn"],"真心实意":["zhēn","yì"],
+"坚忍不拔":["jiān","bá"],"拔刀相助":["bá","zhù"],"乐此不疲":["lè","pí"],"皮开肉绽":["pí","zhàn"],"战无不胜":["zhàn","shèng"],"胜任愉快":["shèng","kuài"],"快马加鞭":["kuài","biān"],
+"迫不及待":["pò","dài"],"待价而沽":["dài","gū"],"沽名钓誉":["gū","yù"],"誉满天下":["yù","xià"],"下笔成章":["xià","zhāng"],"张冠李戴":["zhāng","dài"],"戴月披星":["dài","xīng"],
+"画龙点睛":["huà","jīng"],"惊心动魄":["jīng","pò"],"破釜沉舟":["pò","zhōu"],"塞翁失马":["sài","mǎ"],
+"守株待兔":["shǒu","tù"],"兔死狐悲":["tù","bēi"],"悲欢离合":["bēi","hé"],"合二为一":["hé","yī"],"一鸣惊人":["yī","rén"],
+"掩耳盗铃":["yǎn","líng"],"灵机一动":["líng","dòng"],"音容宛在":["yīn","zài"],"在所不惜":["zài","xī"],"惜墨如金":["xī","jīn"],"金蝉脱壳":["jīn","qiào"],
+"自相矛盾":["zì","dùn"],"马不停蹄":["mǎ","tí"],"啼笑皆非":["tí","fēi"],"非同小可":["fēi","kě"],"可歌可泣":["kě","qì"],
+"滥竽充数":["làn","shù"],"二话不说":["èr","shuō"],"说长道短":["shuō","duǎn"],"短兵相接":["duǎn","jiē"],"接踵而至":["jiē","zhì"],"至理名言":["zhì","yán"],"言而有信":["yán","xìn"],
+"依依不舍":["yī","shě"],"舍生取义":["shě","yì"],"新陈代谢":["xīn","xiè"],"谢天谢地":["xiè","dì"],"地久天长":["dì","cháng"],"长治久安":["cháng","ān"],
+"波光粼粼":["bō","lín"],"鳞次栉比":["lín","bǐ"],"直抒胸臆":["zhí","yì"],"义愤填膺":["yì","yīng"],"鹰击长空":["yīng","kōng"],
+"锲而不舍":["qiè","shě"],"义正辞严":["yì","yán"],"严阵以待":["yán","dài"],
+"崇山峻岭":["chóng","lǐng"],"领异标新":["lǐng","xīn"],"摇摇欲坠":["yáo","zhuì"],
+"赴汤蹈火":["fù","huǒ"],"火中取栗":["huǒ","lì"],"力挽狂澜":["lì","lán"],"兰桂齐芳":["lán","fāng"],"爱不释手":["ài","shǒu"],"手不释卷":["shǒu","juàn"],"卷土重来":["juǎn","lái"],"来之不易":["lái","yì"],
+"流芳百世":["liú","shì"],"世外桃源":["shì","yuán"],"源远流长":["yuán","cháng"],"捉襟见肘":["zhuō","zhǒu"],
+"日新月异":["rì","yì"],"声名鹊起":["shēng","qǐ"],"起死回生":["qǐ","shēng"],"虎头蛇尾":["hǔ","wěi"],"尾大不掉":["wěi","diào"],"掉以轻心":["diào","xīn"],"心旷神怡":["xīn","yí"],
+"专心致志":["zhuān","zhì"],"一针见血":["yī","xuè"],"血口喷人":["xuè","rén"],"人杰地灵":["rén","líng"],
+"戴罪立功":["dài","gōng"],"以一当十":["yǐ","shí"],"十全十美":["shí","měi"],
+"乘风破浪":["chéng","làng"],"浪子回头":["làng","tóu"],"头头是道":["tóu","dào"],"家喻户晓":["jiā","xiǎo"],"晓以利害":["xiǎo","hài"],"害群之马":["hài","mǎ"],
+"亡羊补牢":["wáng","láo"],"牢不可破":["láo","pò"],"画蛇添足":["huà","zú"],"对牛弹琴":["duì","qín"],"琴棋书画":["qín","huà"],
+"望梅止渴":["wàng","kě"],"泣不成声":["qì","shēng"],"息事宁人":["xī","rén"],"闻鸡起舞":["wén","wǔ"],"闭门造车":["bì","chē"],
+"负荆请罪":["fù","zuì"],"完璧归赵":["wán","zhào"],"照猫画虎":["zhào","hǔ"],"鹤立鸡群":["hè","qún"],"群龙无首":["qún","shǒu"],
+"首当其冲":["shǒu","chōng"],"杯弓蛇影":["bēi","yǐng"],"影影绰绰":["yǐng","chuò"],"绰绰有余":["chuò","yú"],"余音绕梁":["yú","liáng"],
+"梁上君子":["liáng","zǐ"],"子虚乌有":["zǐ","yǒu"],"有口皆碑":["yǒu","bēi"],"沧海桑田":["cāng","tián"],"甜言蜜语":["tián","yǔ"],
+"语重心长":["yǔ","cháng"],"长驱直入":["cháng","rù"],"入木三分":["rù","fēn"],"分秒必争":["fēn","zhēng"],"争先恐后":["zhēng","hòu"]
+};
+// __DATA_CHENYU__
+/* 超纲成语链（课外常用成语，高关卡使用） */
+const EXTRA_CHENYU=[
+["亡羊补牢","牢不可破","破釜沉舟","舟车劳顿","顿开茅塞","塞翁失马","马到成功","功成名就"],
+["画蛇添足","足智多谋","谋事在人","人杰地灵","灵机一动","动人心弦","弦外之音","音容笑貌"],
+["对牛弹琴","琴棋书画","画龙点睛","惊心动魄","破釜沉舟","舟车劳顿","顿开茅塞","塞翁失马"],
+["望梅止渴","可歌可泣","泣不成声","声东击西","息事宁人","人山人海","海阔天空","空前绝后"],
+["闻鸡起舞","舞文弄墨","墨守成规","规行矩步","步步为营","营私舞弊","闭门造车","车水马龙","龙腾虎跃"],
+["负荆请罪","罪魁祸首","首屈一指","指日可待","待人接物","物美价廉","廉洁奉公","公正无私"],
+["完璧归赵","照猫画虎","虎头蛇尾","尾大不掉","掉以轻心","心旷神怡"],
+["鹤立鸡群","群龙无首","首当其冲","冲锋陷阵","镇定自若","若有所思","思前想后","后来居上"],
+["杯弓蛇影","影影绰绰","绰绰有余","余音绕梁","梁上君子","子虚乌有","有口皆碑"],
+["沧海桑田","甜言蜜语","语重心长","长驱直入","入木三分","分秒必争","争先恐后","后来居上"]
+];
+
+/* ================= 全局状态 ================= */
+let G={ grade:1, mode:'match', level:1, coins:0 };
+try{ G.coins=parseInt(localStorage.getItem('hzw_coin')||'0'); }catch(e){}
+let qState={ idx:0,total:0,right:0,wrong:0,combo:0,bestCombo:0,startTime:0,answered:false,chain:null,chainPos:0 };
+
+/* ================= 成就与每日任务 ================= */
+const ACHIEVEMENTS=[
+  {id:'a1', name:'初次冒险', icon:'🎒', desc:'通关任意 1 关', cond:s=>s.cleared>=1},
+  {id:'a2', name:'识字新星', icon:'🌟', desc:'累计通关 10 关', cond:s=>s.cleared>=10},
+  {id:'a3', name:'识字小达人', icon:'📚', desc:'累计通关 30 关', cond:s=>s.cleared>=30},
+  {id:'a4', name:'识字大王', icon:'👑', desc:'累计通关 100 关', cond:s=>s.cleared>=100},
+  {id:'a5', name:'满分学霸', icon:'💯', desc:'获得 20 次三星评价', cond:s=>s.star3>=20},
+  {id:'a6', name:'连击高手', icon:'🔥', desc:'单局最佳连击达到 10', cond:s=>s.bestCombo>=10},
+  {id:'a7', name:'成语高手', icon:'🐉', desc:'成语模式通关 10 关', cond:s=>s.chengCleared>=10},
+  {id:'a8', name:'挑战极限', icon:'🏔️', desc:'通关任意一个第 30 关', cond:s=>s.level30},
+  {id:'a9', name:'坚持不懈', icon:'📅', desc:'连续打卡 7 天', cond:s=>s.streak>=7},
+  {id:'a10', name:'忠实玩家', icon:'🏠', desc:'累计游玩 10 天', cond:s=>s.days>=10}
+];
+const TASK_POOL=[
+  {id:'play1', name:'完成 1 关挑战', target:1},
+  {id:'play3', name:'完成 3 关挑战', target:3},
+  {id:'star3', name:'拿一次三星评价', target:1},
+  {id:'combo5', name:'一局连击达到 5', target:1},
+  {id:'cheng', name:'玩一局成语消消乐', target:1},
+  {id:'word', name:'玩一局组词消消乐', target:1},
+  {id:'gold50', name:'一天获得 50 金币', target:50},
+  {id:'perfect', name:'一局全对无失误', target:1}
+];
+function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function yesterdayStr(){ const d=new Date(Date.now()-86400000); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function getStats(){ try{ return JSON.parse(localStorage.getItem('hzw_stats')||'{}'); }catch(e){ return {}; } }
+function saveStats(s){ try{ localStorage.setItem('hzw_stats', JSON.stringify(s)); }catch(e){} }
+function getDailyRaw(){ try{ return JSON.parse(localStorage.getItem('hzw_daily')||'null'); }catch(e){ return null; } }
+function saveDaily(d){ try{ localStorage.setItem('hzw_daily', JSON.stringify(d)); }catch(e){} }
+function getDaily(){
+  const today=todayStr();
+  let d=getDailyRaw();
+  if(!d||d.date!==today){
+    d={date:today, tasks:shuffle(TASK_POOL.slice()).slice(0,3).map(t=>({id:t.id, prog:0, done:false}))};
+    saveDaily(d);
+  }
+  return d;
+}
+function getAchIds(){ try{ return JSON.parse(localStorage.getItem('hzw_ach')||'[]'); }catch(e){ return []; } }
+function saveAch(ids){ try{ localStorage.setItem('hzw_ach', JSON.stringify([...ids])); }catch(e){} }
+function showDaily(){
+  SOUND.click();
+  const st=getStats();
+  document.getElementById('streakLine').textContent =
+    (st.streak||0)>1 ? '🔥 已连续打卡 '+st.streak+' 天！' : '今天也要加油哦！';
+  const d=getDaily();
+  document.getElementById('dailyList').innerHTML = d.tasks.map(t=>{
+    const def=TASK_POOL.find(x=>x.id===t.id);
+    const pct=Math.min(100, Math.round(t.prog/def.target*100));
+    return `<div class="task-item">
+      <span class="task-name">${def.name}</span>
+      <span class="task-done">${t.done?'✅':'⏳'}</span>
+      <div style="flex:0 0 140px">
+        <div class="task-bar"><i style="width:${pct}%"></i></div>
+        <div class="task-prog">${Math.min(t.prog,def.target)}/${def.target}${t.done?' · 奖励已发':' · 奖励+20🪙'}</div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('panelDaily').style.display='flex';
+}
+function showAch(){
+  SOUND.click();
+  const got=getAchIds();
+  document.getElementById('achList').innerHTML = ACHIEVEMENTS.map(a=>{
+    const ok=got.includes(a.id);
+    return `<div class="ach-item ${ok?'got':'lock'}">
+      <span class="ach-icon">${ok?a.icon:'❔'}</span>
+      <div><div class="ach-name">${a.name}</div><div class="ach-desc">${a.desc}${ok?' · 已解锁':' · 未解锁'}</div></div>
+    </div>`;
+  }).join('');
+  document.getElementById('panelAch').style.display='flex';
+}
+function closePanel(id){ SOUND.click(); document.getElementById(id).style.display='none'; }
+
+/* 关卡进度：{ "1_match": 已解锁关数 }，持久化 */
+function getProgress(){ try{ return JSON.parse(localStorage.getItem('hzw_progress')||'{}'); }catch(e){ return {}; } }
+function setProgress(p){ try{ localStorage.setItem('hzw_progress', JSON.stringify(p)); }catch(e){} }
+function unlockedLevel(){ const p=getProgress(); return p[G.grade+'_'+G.mode]||1; }
+
+/* 游戏定时器统一管理：切换游戏时清理残留回调，避免竞态 */
+const _timers=new Set();
+function later(fn,ms){ const id=setTimeout(()=>{ _timers.delete(id); fn(); },ms); _timers.add(id); return id; }
+function clearTimers(){ _timers.forEach(id=>clearTimeout(id)); _timers.clear(); }
+
+function saveCoins(){ try{ localStorage.setItem('hzw_coin',G.coins); }catch(e){} document.getElementById('coinHome').textContent=G.coins; }
+
+/* ================= 界面切换 ================= */
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function goHome(){
+  SOUND.init(); SOUND.click();
+  showScreen('screen-home'); saveCoins();
+  const got=getAchIds();
+  const cur=ACHIEVEMENTS.filter(a=>got.includes(a.id)).pop();
+  document.getElementById('homeTitle').textContent = cur? '· '+cur.icon+' '+cur.name : '· 出发吧！';
+}
+function goGrade(){
+  SOUND.init(); SOUND.click();
+  document.getElementById('gradeGrid').innerHTML =
+    [1,2,3,4,5,6].map(g=>`
+      <div class="grade-card" style="background:linear-gradient(135deg,${GRADE_COLORS[g]},${GRADE_COLORS[g]}cc);animation-delay:${g*60}ms"
+           onclick="pickGrade(${g})">
+        <div class="grade-num">${g}</div>
+        <div class="grade-name">${GRADE_NAMES[g]}</div>
+        <div class="grade-tag">${GRADE_TAGS[g-1]}</div>
+      </div>`).join('');
+  showScreen('screen-grade');
+}
+function pickGrade(g){ SOUND.click(); G.grade=g; goMode(); }
+function goMode(){
+  document.getElementById('modeTitle').textContent=GRADE_NAMES[G.grade];
+  let total=0; for(let g=1;g<=G.grade;g++) total+=gradeCharsOf(g).length;
+  const mixTxt = G.grade===1 ? `收录 ${GRADE_NAMES[1].length} 个字` :
+    `已混合 1~${G.grade} 年级共 <b>${total}</b> 个字（${GRADE_NAMES[G.grade]}占6成，前面年级占4成）`;
+  document.getElementById('modeHint').innerHTML =
+    `📖 ${mixTxt} · 每配对成功一队 +10 金币，连击有加成！`;
+  document.getElementById('modeGrid').innerHTML = MODES.map(m=>`
+    <div class="mode-card" onclick="pickMode('${m.id}')">
+      <div class="mode-icon">${m.icon}</div>
+      <div class="mode-name">${m.name}</div>
+      <div class="mode-desc">${m.desc}</div>
+    </div>`).join('');
+  showScreen('screen-mode');
+}
+function gradeCharsOf(g){ return GRADE_DATA[g]||[]; }
+function pickMode(id){ SOUND.click(); G.mode=id; G.level=1; goLevels(); }
+function goLevels(){
+  SOUND.init();
+  const m=MODES.find(x=>x.id===G.mode);
+  document.getElementById('levelsTitle').textContent = m.name+' · '+GRADE_NAMES[G.grade];
+  const unlocked=unlockedLevel();
+  document.getElementById('levelsHint').innerHTML =
+    '🌟 每关难度递增：泡泡更多、超纲字更多，通关解锁下一关！<br>🎯 当前进度：第 <b>'+Math.min(unlocked,30)+'</b> 关';
+  document.getElementById('levelGrid').innerHTML = Array.from({length:30},(_,i)=>{
+    const n=i+1, open=n<=unlocked, cur=n===unlocked;
+    return `<div class="level-btn ${open?'':'locked'} ${cur?'cur':''}" ${open?`onclick="pickLevel(${n})"`:''}>
+      ${n<=unlocked?'':'🔒'}${n}</div>`;
+  }).join('');
+  showScreen('screen-levels');
+}
+function pickLevel(n){ SOUND.click(); G.level=n; startGame(); }
+
+/* ================= 工具函数 ================= */
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function pickN(arr,n){ return shuffle(arr.slice()).slice(0,n); }
+function gradeChars(){ return GRADE_DATA[G.grade]||[]; }
+function gradeChenyu(){ return CHENYU[G.grade]||{bank:[],chains:[]}; }
+function randInt(n){ return Math.floor(Math.random()*n); }
+function fmtTime(s){ return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); }
+
+/* ================= 游戏启动与结算 ================= */
+function startGame(){
+  clearTimers();
+  SOUND.init();
+  qState={ idx:0,right:0,wrong:0,combo:0,bestCombo:0,startTime:Date.now(),answered:false };
+  G.hints=3;
+  const hb=document.getElementById('hintBtn');
+  hb.textContent='💡 3'; hb.classList.remove('off');
+  document.getElementById('coinGame').textContent=G.coins;
+  document.getElementById('gameTitle').textContent = MODES.find(m=>m.id===G.mode).name+' · 第'+G.level+'关';
+  document.getElementById('comboText').classList.remove('show');
+  document.getElementById('modal').style.display='none';
+  showScreen('screen-game');
+  startPairGame(G.mode);
+}
+/* 结算：下一关 / 再来一局 */
+function startNext(){
+  SOUND.click();
+  if(G.level<30){ G.level++; startGame(); }
+  else replay();
+}
+function quitGame(){ SOUND.click(); document.getElementById('modal').style.display='none'; saveCoins(); goLevels(); }
+function replay(){ SOUND.click(); startGame(); }
+
+function updateCombo(){
+  const c=document.getElementById('comboText');
+  if(qState.combo>=2){ c.textContent='🔥连击x'+qState.combo; c.classList.add('show'); }
+  else c.classList.remove('show');
+}
+function addCoin(n){
+  G.coins+=n; document.getElementById('coinGame').textContent=G.coins; saveCoins();
+}
+function showResult(){
+  const el=document.getElementById('modal');
+  const stars = qState.right/qState.total >= 1 ? 3 : qState.right/qState.total >= .7 ? 2 : 1;
+  document.getElementById('stars').innerHTML =
+    [1,2,3].map(i=>`<span class="${i<=stars?'star-in':''}" style="animation-delay:${i*250}ms">${i<=stars?'⭐':'☆'}</span>`).join('');
+  const secs=Math.round((Date.now()-qState.startTime)/1000);
+  const gain=stars*10 + (G.mode==='match'?20:0);
+  addCoin(gain);
+  // 通关解锁下一关
+  const key=G.grade+'_'+G.mode;
+  const prog=getProgress();
+  const isNew=(prog[key]||1)<=G.level && G.level<30;
+  if(isNew){ prog[key]=G.level+1; setProgress(prog); }
+  const titles=['继续加油，再来一次！','真棒，答得很好！','太厉害了，全对满分！'];
+  document.getElementById('modalTitle').textContent = stars===3 ? titles[2] : stars===2 ? titles[1] : titles[0];
+  document.getElementById('modalBtn1').textContent = G.level<30 ? '▶ 下一关' : '🔄 再来一局';
+  document.getElementById('modalInfo').innerHTML =
+    `答对 <b>${qState.right}</b> 对 / 共 <b>${qState.total}</b> 对 · 用时 <b>${fmtTime(secs)}</b><br>`+
+    (qState.bestCombo>=2?`最佳连击 <b>${qState.bestCombo}</b> 🔥 · `:'')+
+    `获得金币 <b>+${gain}</b> 🪙`+
+    (isNew?`<br>🎉 解锁了第 <b>${G.level+1}</b> 关！`:G.level===30?`<br>🏆 第30关通关，你太棒了！`:'');
+  if(stars===3){ SOUND.win(); rainCelebrate(); } else if(stars===2){ SOUND.win(); } else { SOUND.lose(); }
+  later(()=>{ el.style.display='flex'; }, stars===3?500:250);
+
+  /* ---- 统计 / 每日任务 / 成就 ---- */
+  const st=getStats();
+  st.cleared=(st.cleared||0)+1;
+  if(stars===3) st.star3=(st.star3||0)+1;
+  st.bestCombo=Math.max(st.bestCombo||0, qState.bestCombo);
+  if(G.mode==='chengyu') st.chengCleared=(st.chengCleared||0)+1;
+  if(G.level===30) st.level30=true;
+  const today=todayStr();
+  if(st.lastDate!==today){
+    st.days=(st.days||0)+1;
+    st.streak = st.lastDate===yesterdayStr() ? (st.streak||0)+1 : 1;
+    st.lastDate=today;
+  }
+  saveStats(st);
+  const d=getDaily();
+  let taskGold=0;
+  d.tasks.forEach(t=>{
+    if(t.done) return;
+    const def=TASK_POOL.find(x=>x.id===t.id);
+    if(!def) return;
+    let step=0;
+    if(t.id==='play1'||t.id==='play3') step=1;
+    else if(t.id==='star3') step=stars===3?1:0;
+    else if(t.id==='combo5') step=qState.bestCombo>=5?1:0;
+    else if(t.id==='cheng') step=G.mode==='chengyu'?1:0;
+    else if(t.id==='word') step=G.mode==='wordgame'?1:0;
+    else if(t.id==='gold50') step=gain;
+    else if(t.id==='perfect') step=qState.wrong===0?1:0;
+    t.prog+=step;
+    if(t.prog>=def.target){ t.done=true; taskGold+=20; }
+  });
+  saveDaily(d);
+  if(taskGold>0){ addCoin(taskGold); later(()=>showTip('✅ 完成每日任务 +'+taskGold+' 金币！'),900); }
+  const unlocked=getAchIds();
+  const newAch=ACHIEVEMENTS.filter(a=>!unlocked.includes(a.id) && a.cond(st));
+  if(newAch.length){
+    const ids=new Set(unlocked); newAch.forEach(a=>ids.add(a.id));
+    saveAch(ids);
+    later(()=>showTip('🎉 解锁成就：'+newAch[0].icon+' '+newAch[0].name),1200);
+  }
+}
+
+/* ================= 统一消消乐引擎（四类配对玩法） ================= */
+/* 年级混合抽样：当前年级60%，之前年级30%，超纲10%（extraRatio随关卡调整） */
+function mergedChars(grade){
+  const map=new Map();
+  for(let g=1;g<=grade;g++) for(const c of GRADE_DATA[g]) map.set(c[0],c);
+  return [...map.values()];
+}
+/* 超纲字池：低年级取高年级的字，六年级取初中常用字库 */
+function extraChars(grade){
+  if(grade<6){
+    const all=[];
+    for(let g=grade+1;g<=6;g++) all.push(...GRADE_DATA[g]);
+    return all;
+  }
+  return EXTRA6;
+}
+function findChar(c){
+  for(let g=1;g<=6;g++){ const f=GRADE_DATA[g].find(x=>x[0]===c); if(f) return f; }
+  const f=EXTRA6.find(x=>x[0]===c); if(f) return f;
+  return null;
+}
+/* 关卡历史（本玩法之前关卡用过的字/成语），供20%重复复习 */
+function getHistoryAll(){ try{ return JSON.parse(localStorage.getItem('hzw_hist')||'{}'); }catch(e){ return {}; } }
+function getHistoryList(){ const h=getHistoryAll(); return h[G.grade+'_'+G.mode]||[]; }
+function recordUsedList(list){
+  const h=getHistoryAll(); const key=G.grade+'_'+G.mode;
+  const arr=h[key]||[]; const set=new Set(arr);
+  for(const x of list) if(!set.has(x)){ set.add(x); arr.push(x); }
+  h[key]=arr;
+  try{ localStorage.setItem('hzw_hist', JSON.stringify(h)); }catch(e){}
+}
+function levelSample(grade,n,extraRatio,filter,exclude){
+  const cur=[...GRADE_DATA[grade]].filter(c=>!filter||filter(c));
+  const rest=mergedChars(grade).filter(c=>!cur.some(x=>x[0]===c[0]) && (!filter||filter(c)));
+  const extra=extraChars(grade).filter(c=>!cur.some(x=>x[0]===c[0]) && !rest.some(x=>x[0]===c[0]) && (!filter||filter(c)));
+  const out=[]; const used=new Set(exclude||[]);
+  const pickFrom=(pool)=>{ const p=pool.filter(c=>!used.has(c[0])); if(!p.length) return null; const c=p[randInt(p.length)]; used.add(c[0]); return c; };
+  // 保底：每局至少 1~2 个之前年级的字，保证复习效果
+  if(rest.length){
+    const minPrev=Math.max(1, Math.min(2, Math.floor(n*0.15)));
+    for(let i=0;i<minPrev;i++){ const c=pickFrom(rest); if(c) out.push(c); }
+  }
+  // 超纲字：按关卡比例抽取（低关少、高关多）
+  const extraCount=Math.round(n*extraRatio);
+  for(let i=0;i<extraCount;i++){ const c=pickFrom(extra); if(!c) break; out.push(c); }
+  while(out.length<n){
+    const r=Math.random();
+    const pool = rest.length===0 ? (r<0.9?cur:extra) : (r<0.6?cur:(r<0.9?rest:extra));
+    const c = pickFrom(pool) || pickFrom(cur) || pickFrom(rest) || pickFrom(extra);
+    if(!c) break;
+    out.push(c);
+  }
+  return out;
+}
+function findCharPinyin(ch){
+  for(let g=1;g<=6;g++){ const f=GRADE_DATA[g].find(x=>x[0]===ch); if(f) return f[1]; }
+  const f=EXTRA6.find(x=>x[0]===ch); if(f) return f[1];
+  return null;
+}
+/* 组词完整拼音，如 水果 → shuǐ guǒ；拼不出则返回 null */
+function wordPin(c){
+  const w=c[2];
+  if(w.length!==2) return null;
+  const p2=findCharPinyin(w[1]);
+  return p2? c[1]+' '+p2 : null;
+}
+/* 随机挑一条成语链：超纲链(高关卡)→之前年级链→当前年级链 */
+function pickChain(grade, level){
+  const prev=[];
+  for(let g=1;g<grade;g++) for(const ch of CHENYU[g].chains) prev.push(ch);
+  const r=Math.random();
+  const extraR = level>=21 ? 0.45 : level>=11 ? 0.2 : 0;
+  if(extraR && r<extraR) return EXTRA_CHENYU[randInt(EXTRA_CHENYU.length)];
+  if(prev.length && r<(0.4+extraR)) return prev[randInt(prev.length)];
+  return CHENYU[grade].chains[randInt(CHENYU[grade].chains.length)];
+}
+/* 取 n 个成语：20% 从历史（之前关卡玩过的成语）复习，其余取接龙链，不足时补足 */
+function pickChengyus(grade,n){
+  const seen=new Set();
+  const out=[];
+  // 20% 历史复习
+  const hist=getHistoryList();
+  shuffle(hist);
+  const repeatCount=Math.round(n*0.2);
+  for(const w of hist){
+    if(out.length>=repeatCount) break;
+    if(seen.has(w)) continue;
+    seen.add(w); out.push(w);
+  }
+  // 取接龙链
+  const chain=pickChain(grade, G.level||1);
+  for(const w of chain){ if(!seen.has(w) && out.length<n){ seen.add(w); out.push(w); } }
+  // 补足
+  if(out.length<n){
+    const all=[];
+    for(let g=1;g<=grade;g++) for(const ch of CHENYU[g].chains) for(const w of ch){ if(!seen.has(w)){ seen.add(w); all.push(w); } }
+    for(const ch of EXTRA_CHENYU) for(const w of ch){ if(!seen.has(w)){ seen.add(w); all.push(w); } }
+    shuffle(all);
+    while(out.length<n && all.length) out.push(all.pop());
+  }
+  return out.slice(0,n);
+}
+/* 把成语拆成两个字块：双字+双字为主，四字成语约35%拆成 单字+三字 */
+function splitCheng(yu){
+  const n=yu.length;
+  if(n===4 && Math.random()<0.35) return [yu[0], yu.slice(1)];
+  const m=Math.floor(n/2);
+  return [yu.slice(0,m), yu.slice(m)];
+}
+
+let pState={ items:[], first:null, second:null, lock:false, done:0 };
+function updateProgress(){
+  const t=document.getElementById('progressText');
+  t.textContent=`${pState.done/2}/${pState.items.length/2}`;
+}
+/* 顶部提示条（拼出成语 / 顺序提醒 / 解锁提示），fixed 定位挂在 body */
+let tipEl=null;
+function showTip(text){
+  if(!tipEl){ tipEl=document.createElement('div'); tipEl.className='cheng-toast'; document.body.appendChild(tipEl); }
+  tipEl.textContent=text;
+  tipEl.classList.remove('show');
+  void tipEl.offsetWidth;
+  tipEl.classList.add('show');
+  later(()=>tipEl.classList.remove('show'),1600);
+}
+function showChengToast(yu){ showTip('成语：'+yu); }
+
+/* ---------- 答错学习卡 ---------- */
+function learnInfoFromId(id){
+  if(id.charAt(0)==='m'||id.charAt(0)==='w'){
+    const ch=findChar(id.charAt(1));
+    if(ch) return {big:ch[0], pin:ch[1], extra:'组词：'+ch[2]};
+  }
+  if(id.charAt(0)==='p'){
+    const parts=id.slice(1).split('|');
+    return {big:parts[1], pin:parts[0], extra:''};
+  }
+  if(id.charAt(0)==='c'){
+    const yu=id.slice(1);
+    const pi=CHENYU_PIN[yu]||null;
+    const pin=[...yu].map((ch,i)=> findCharPinyin(ch) || (pi && (i===0||i===yu.length-1)? pi[i===0?0:1] : '·')).join(' ');
+    return {big:yu, pin:pin, extra:''};
+  }
+  return null;
+}
+function showLearnCard(id){
+  const info=learnInfoFromId(id);
+  if(!info) return;
+  document.getElementById('learnBig').textContent=info.big;
+  document.getElementById('learnPin').textContent=info.pin||'';
+  document.getElementById('learnExtra').textContent=info.extra||'';
+  document.getElementById('learnModal').style.display='flex';
+  SOUND.lose();
+  later(closeLearn,3200);
+}
+function closeLearn(){ document.getElementById('learnModal').style.display='none'; }
+
+/* ---------- 提示按钮 ---------- */
+function useHint(){
+  if(pState.lock) return;
+  if(G.hints<=0){ showTip('提示次数用完了！'); return; }
+  G.hints--;
+  document.getElementById('hintBtn').textContent='💡 '+G.hints;
+  if(G.hints<=0) document.getElementById('hintBtn').classList.add('off');
+  if(pState.first!==null){
+    const sel=document.querySelectorAll('#gameArea .bubble')[pState.first];
+    if(sel) sel.classList.remove('selected');
+    pState.first=null;
+  }
+  let pi=null, pj=null;
+  for(let i=0;i<pState.items.length && !pi;i++){
+    if(pState.items[i].done) continue;
+    for(let j=i+1;j<pState.items.length;j++){
+      if(!pState.items[j].done && pState.items[j].pair===pState.items[i].pair){ pi=i; pj=j; break; }
+    }
+  }
+  if(pi===null) return;
+  const els=document.querySelectorAll('#gameArea .bubble');
+  if(!els[pi]||!els[pj]) return;
+  els[pi].classList.add('hintglow'); els[pj].classList.add('hintglow');
+  SOUND.star();
+  later(()=>{ els[pi].classList.remove('hintglow'); els[pj].classList.remove('hintglow'); },1600);
+}
+
+/* 每关抽样：20% 从本玩法历史（之前关卡玩过的字）中复习抽取，80% 正常抽取 */
+function gameSample(grade,n,extraRatio,filter){
+  const hist=getHistoryList();
+  const histChars=shuffle(hist.map(findChar).filter(Boolean).filter(c=>!filter||filter(c)));
+  const used=new Set();
+  const out=[];
+  const repeatCount=Math.round(n*0.2);
+  for(const c of histChars){
+    if(out.length>=repeatCount) break;
+    if(used.has(c[0])) continue;
+    used.add(c[0]); out.push(c);
+  }
+  const fresh=levelSample(grade, n-out.length, extraRatio, filter, [...used]);
+  for(const c of fresh) out.push(c);
+  return out;
+}
+/* 生成配对数据：{a:{t,shp,s}, b:{t,shp,s}}，n=对数，extra=超纲比例 */
+function buildPairs(kind, n, extra){
+  const g=G.grade;
+  if(kind==='match'){
+    return gameSample(g,n,extra).map(c=>({a:{t:c[0],shp:'circle',s:'big'}, b:{t:c[1],shp:'circle',s:'small'}, id:'m'+c[0]+c[1]}));
+  }
+  if(kind==='wordgame'){
+    return gameSample(g,n,extra).map(c=>({a:{t:c[0],shp:'circle',s:'big'}, b:{t:c[2],shp:'sq',s:'mid'}, id:'w'+c[0]+c[2]}));
+  }
+  if(kind==='pinyinv'){
+    return gameSample(g,n,extra,c=>c[2].length===2&&wordPin(c)).map(c=>{
+      const p=wordPin(c);
+      return {a:{t:p,shp:'sq',s:'mid'}, b:{t:c[2],shp:'sq',s:'mid'}, id:'p'+p+'|'+c[2]};
+    });
+  }
+  // chengyu：把成语拆成字块配对，点两块拼出完整成语即消除（每局 n 个成语）
+  return pickChengyus(g,n).map((yu,i)=>{
+    // 前2个保证拆成 单字+三字，其余 双字+双字（四字成语有35%概率拆单字）
+    const [x,y]=(i<2 && yu.length===4) ? [yu[0], yu.slice(1)] : splitCheng(yu);
+    return {a:{t:x,shp:x.length===1?'circle':'sq',s:x.length===1?'big':'mid'},
+            b:{t:y,shp:y.length===1?'circle':'sq',s:y.length===1?'big':'mid'},
+            id:'c'+yu};
+  });
+}
+
+function startPairGame(kind){
+  /* 关卡难度：每10关一档，对数10→12→14，超纲比例6%→40%，每关20%历史复习 */
+  const lv=G.level||1;
+  const n=10+Math.floor((lv-1)/10)*2;
+  const extra=Math.min(0.4, 0.06+(lv-1)*0.011);
+  const pairs=buildPairs(kind,n,extra);
+  /* 记录本局内容到历史（供后续关卡20%复习抽取） */
+  const used=[];
+  for(const p of pairs){
+    if(p.id[0]==='m'||p.id[0]==='w') used.push(p.id[1]);
+    else if(p.id[0]==='p') used.push(p.id.split('|')[1][0]);
+    else if(p.id[0]==='c') used.push(p.id.slice(1));
+  }
+  recordUsedList(used);
+  const items=[];
+  pairs.forEach((p,i)=>{
+    items.push(Object.assign({}, p.a, {pair:i, done:false, id:p.id, side:0}));
+    items.push(Object.assign({}, p.b, {pair:i, done:false, id:p.id, side:1}));
+  });
+  shuffle(items);
+  pState={ items, first:null, second:null, lock:false, done:0 };
+  qState.total=pairs.length;
+  renderPairs();
+  updateProgress();
+}
+function renderPairs(){
+  const area=document.getElementById('gameArea');
+  const grid=document.createElement('div');
+  grid.className='match-grid';
+  pState.items.forEach((it,i)=>{
+    const b=document.createElement('div');
+    b.className='bubble'+(it.shp==='sq'?' sq':'')+' '+it.s;
+    b.textContent=it.t;
+    b.style.backgroundColor=COLORS[(it.pair*2 + (it.done?0:0)) % COLORS.length];
+    b.style.animationDelay=(i*40)+'ms';
+    b.onclick=()=>clickPair(i,b);
+    grid.appendChild(b);
+  });
+  area.innerHTML='';
+  area.appendChild(grid);
+}
+/* 成语/组词模式要求顺序：必须先点前面的块（成语前半/汉字），再点后面的块 */
+function orderMode(){ return G.mode==='chengyu'||G.mode==='wordgame'; }
+function clickPair(i,el){
+  if(pState.lock||pState.items[i].done) return;
+  SOUND.init(); SOUND.click();
+  const it=pState.items[i];
+  if(pState.first===null){
+    if(orderMode() && it.side!==0){
+      SOUND.wrong();
+      el.classList.add('wrong');
+      showTip(G.mode==='chengyu' ? '要先点成语前面的部分哦！' : '要先点左边的汉字哦！');
+      later(()=>el.classList.remove('wrong'),420);
+      return;
+    }
+    pState.first=i; el.classList.add('selected'); return;
+  }
+  if(pState.first===i) return;
+  pState.second=i; el.classList.add('selected');
+  pState.lock=true;
+  const a=pState.items[pState.first], b=pState.items[pState.second];
+  const els=document.querySelectorAll('#gameArea .bubble');
+  later(()=>{
+    const orderOK = orderMode() ? (a.side===0 && b.side===1) : true;
+    if(a.pair===b.pair && orderOK){
+      a.done=b.done=true; pState.done+=2;
+      SOUND.pop(); fireworkAt(els[pState.first]); fireworkAt(els[pState.second]);
+      els[pState.first].classList.add('done');
+      els[pState.second].classList.add('done');
+      if(G.mode==='chengyu' && a.id.charAt(0)==='c') showChengToast(a.id.slice(1));
+      qState.right++; qState.combo++; qState.bestCombo=Math.max(qState.bestCombo,qState.combo);
+      updateCombo();
+      pState.first=null; pState.second=null; pState.lock=false;
+      if(pState.done===pState.items.length){
+        qState.total=pState.items.length/2;
+        later(showResult,700);
+      }
+    }else{
+      SOUND.wrong(); qState.wrong++; qState.combo=0; updateCombo();
+      els[pState.first].classList.add('wrong');
+      els[pState.second].classList.add('wrong');
+      const f=pState.first, s=pState.second;
+      /* 答错学习卡：展示第一个泡泡对应的学习内容 */
+      showLearnCard(a.id);
+      pState.first=null; pState.second=null;
+      later(()=>{
+        els[f].classList.remove('selected','wrong');
+        els[s].classList.remove('selected','wrong');
+        pState.lock=false;
+      },500);
+    }
+  },260);
+}
+
+/* ================= 模式定义 ================= */
+const MODES=[
+  {id:'match',    name:'生字消消乐', icon:'💥', desc:'把汉字和拼音泡泡配对，消除所有泡泡！'},
+  {id:'pinyinv',  name:'拼音消消乐', icon:'🔤', desc:'把组词和它的拼音配对，消灭所有泡泡'},
+  {id:'chengyu',  name:'成语接龙消消乐', icon:'🐉', desc:'把成语拆成字块，点击两个字块拼出成语消除（取自接龙链）'},
+  {id:'wordgame', name:'组词消消乐', icon:'🧩', desc:'把汉字和它的组词配对，消灭所有泡泡'}
+];
+const COLORS=['#FF6B6B','#4ECDC4','#45B7D1','#FFA07A','#98D8C8','#F7DC6F','#BB8FCE','#85C1E9','#F8C471','#82E0AA','#F1948A','#D7BDE2'];
+
+/* ================= 背景飘浮动画 ================= */
+(function bg(){
+  const cv=document.getElementById('bgCanvas'), ctx=cv.getContext('2d');
+  let W,H; const dots=[];
+  function resize(){ W=cv.width=innerWidth; H=cv.height=innerHeight; }
+  resize(); addEventListener('resize',resize);
+  for(let i=0;i<46;i++){
+    dots.push({x:Math.random(),y:Math.random(),r:1.5+Math.random()*3,
+      vx:(Math.random()-.5)*.0004, vy:(Math.random()-.5)*.0004,
+      c:['#ffd93d','#4d96ff','#ff9f43','#6bcb77','#ff6b6b'][i%5],a:.12+Math.random()*.3});
+  }
+  (function loop(){
+    ctx.clearRect(0,0,W,H);
+    dots.forEach(d=>{
+      d.x+=d.vx; d.y+=d.vy;
+      if(d.x<0||d.x>1) d.vx*=-1; if(d.y<0||d.y>1) d.vy*=-1;
+      ctx.beginPath(); ctx.arc(d.x*W,d.y*H,d.r,0,7);
+      ctx.fillStyle=d.c; ctx.globalAlpha=d.a; ctx.fill();
+    });
+    ctx.globalAlpha=1;
+    requestAnimationFrame(loop);
+  })();
+})();
+
+saveCoins();
+</script>
+</body>
+</html>
