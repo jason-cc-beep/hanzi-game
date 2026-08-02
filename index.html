@@ -1426,8 +1426,12 @@ function startPairGame(kind){
   recordUsedList(used);
   const items=[];
   pairs.forEach((p,i)=>{
-    items.push(Object.assign({}, p.a, {pair:i, done:false, id:p.id, side:0}));
-    items.push(Object.assign({}, p.b, {pair:i, done:false, id:p.id, side:1}));
+    /* 同一对分配两个不同的随机颜色，颜色与配对完全无关，防止按颜色试答案 */
+    const c1=randInt(COLORS.length);
+    let c2=randInt(COLORS.length);
+    if(c2===c1) c2=(c1+1)%COLORS.length;
+    items.push(Object.assign({}, p.a, {pair:i, done:false, id:p.id, side:0, color:c1}));
+    items.push(Object.assign({}, p.b, {pair:i, done:false, id:p.id, side:1, color:c2}));
   });
   shuffle(items);
   pState={ items, first:null, second:null, lock:false, done:0 };
@@ -1443,7 +1447,7 @@ function renderPairs(){
     const b=document.createElement('div');
     b.className='bubble'+(it.shp==='sq'?' sq':'')+' '+it.s;
     b.textContent=it.t;
-    b.style.backgroundColor=COLORS[(it.pair*2 + (it.done?0:0)) % COLORS.length];
+    b.style.backgroundColor=COLORS[it.color];
     b.style.animationDelay=(i*40)+'ms';
     b.onclick=()=>clickPair(i,b);
     grid.appendChild(b);
