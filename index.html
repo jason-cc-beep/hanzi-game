@@ -174,6 +174,10 @@ body {
 .opt.dim { opacity:.45; }
 
 /* ---------- 提示按钮 / 学习卡 / 成就任务 ---------- */
+.timer-pill {
+  padding:5px 12px; border-radius:30px; font-size:15px; font-weight:bold; color:#555;
+  background:#eef2ff; border:1px solid #dbe3ff;
+}
 .hint-btn {
   padding:6px 14px; border-radius:30px; border:none; cursor:pointer;
   background:linear-gradient(135deg,#4d96ff,#6bcb77); color:#fff; font-size:15px; font-weight:bold;
@@ -321,6 +325,7 @@ body {
         <span class="progress" id="progressText">0/10</span>
       </div>
       <div class="top-right">
+        <span class="timer-pill" id="timerText">⏱ 00:00</span>
         <button class="hint-btn" id="hintBtn" onclick="useHint()">💡 3</button>
         <span class="coin">🪙<b id="coinGame">0</b></span>
         <span class="combo" id="comboText">🔥x2</span>
@@ -330,7 +335,7 @@ body {
   </div>
 
   <!-- 结算弹窗 -->
-  <div id="modal" style="display:none">
+  <div id="modal" class="modal" style="display:none">
     <div class="modal-card">
       <div class="stars" id="stars"></div>
       <div class="modal-title" id="modalTitle">太棒了！</div>
@@ -1014,10 +1019,26 @@ function getProgress(){ try{ return JSON.parse(localStorage.getItem('hzw_progres
 function setProgress(p){ try{ localStorage.setItem('hzw_progress', JSON.stringify(p)); }catch(e){} }
 function unlockedLevel(){ const p=getProgress(); return p[G.grade+'_'+G.mode]||1; }
 
+/* 每关星级记录：{ "2_match": { "3": 2, "5": 3 } } */
+function getStars(){ try{ return JSON.parse(localStorage.getItem('hzw_stars')||'{}'); }catch(e){ return {}; } }
+function saveStars(m){ try{ localStorage.setItem('hzw_stars', JSON.stringify(m)); }catch(e){} }
+
 /* 游戏定时器统一管理：切换游戏时清理残留回调，避免竞态 */
 const _timers=new Set();
 function later(fn,ms){ const id=setTimeout(()=>{ _timers.delete(id); fn(); },ms); _timers.add(id); return id; }
 function clearTimers(){ _timers.forEach(id=>clearTimeout(id)); _timers.clear(); }
+
+/* 关卡计时器：顶部实时显示用时 */
+let gameTimer=null;
+function startTimer(){
+  if(gameTimer) clearInterval(gameTimer);
+  const t0=Date.now();
+  gameTimer=setInterval(()=>{
+    const s=Math.floor((Date.now()-t0)/1000);
+    document.getElementById('timerText').textContent='⏱ '+fmtTime(s);
+  },500);
+}
+function stopTimer(){ if(gameTimer){ clearInterval(gameTimer); gameTimer=null; } }
 
 function saveCoins(){ try{ localStorage.setItem('hzw_coin',G.coins); }catch(e){} document.getElementById('coinHome').textContent=G.coins; }
 
@@ -1070,10 +1091,12 @@ function goLevels(){
   const unlocked=unlockedLevel();
   document.getElementById('levelsHint').innerHTML =
     '🌟 每关难度递增：泡泡更多、超纲字更多，通关解锁下一关！<br>🎯 当前进度：第 <b>'+Math.min(unlocked,30)+'</b> 关';
+  const starMap=(getStars()[G.grade+'_'+G.mode])||{};
   document.getElementById('levelGrid').innerHTML = Array.from({length:30},(_,i)=>{
     const n=i+1, open=n<=unlocked, cur=n===unlocked;
+    const sv=starMap[n]||0;
     return `<div class="level-btn ${open?'':'locked'} ${cur?'cur':''}" ${open?`onclick="pickLevel(${n})"`:''}>
-      ${n<=unlocked?'':'🔒'}${n}</div>`;
+      ${sv>0?`<span class="lv-star">${'⭐'.repeat(sv)}</span>`:''}${n<=unlocked?'':'🔒'}${n}</div>`;
   }).join('');
   showScreen('screen-levels');
 }
@@ -1090,6 +1113,8 @@ function fmtTime(s){ return String(Math.floor(s/60)).padStart(2,'0')+':'+String(
 /* ================= 游戏启动与结算 ================= */
 function startGame(){
   clearTimers();
+  stopTimer();
+  startTimer();
   SOUND.init();
   qState={ idx:0,right:0,wrong:0,combo:0,bestCombo:0,startTime:Date.now(),answered:false };
   G.hints=3;
@@ -1108,7 +1133,16 @@ function startNext(){
   if(G.level<30){ G.level++; startGame(); }
   else replay();
 }
-function quitGame(){ SOUND.click(); document.getElementById('modal').style.display='none'; saveCoins(); goLevels(); }
+function quitGame(){
+  SOUND.click();
+  /* 中途退出确认，防止误触丢当前关 */
+  if(pState.items.length && pState.done>0 && pState.done<pState.items.length){
+    if(typeof confirm==='function' && !confirm('当前关卡还没完成，确定要退出吗？')) return;
+  }
+  stopTimer();
+  document.getElementById('modal').style.display='none';
+  saveCoins(); goLevels();
+}
 function replay(){ SOUND.click(); startGame(); }
 
 function updateCombo(){
@@ -1120,8 +1154,15 @@ function addCoin(n){
   G.coins+=n; document.getElementById('coinGame').textContent=G.coins; saveCoins();
 }
 function showResult(){
+  stopTimer();
   const el=document.getElementById('modal');
   const stars = qState.right/qState.total >= 1 ? 3 : qState.right/qState.total >= .7 ? 2 : 1;
+  /* 保存本关最高星级 */
+  const starMap=getStars();
+  const sk=G.grade+'_'+G.mode;
+  starMap[sk]=starMap[sk]||{};
+  starMap[sk][G.level]=Math.max(starMap[sk][G.level]||0, stars);
+  saveStars(starMap);
   document.getElementById('stars').innerHTML =
     [1,2,3].map(i=>`<span class="${i<=stars?'star-in':''}" style="animation-delay:${i*250}ms">${i<=stars?'⭐':'☆'}</span>`).join('');
   const secs=Math.round((Date.now()-qState.startTime)/1000);
@@ -1139,7 +1180,8 @@ function showResult(){
     `答对 <b>${qState.right}</b> 对 / 共 <b>${qState.total}</b> 对 · 用时 <b>${fmtTime(secs)}</b><br>`+
     (qState.bestCombo>=2?`最佳连击 <b>${qState.bestCombo}</b> 🔥 · `:'')+
     `获得金币 <b>+${gain}</b> 🪙`+
-    (isNew?`<br>🎉 解锁了第 <b>${G.level+1}</b> 关！`:G.level===30?`<br>🏆 第30关通关，你太棒了！`:'');
+    (isNew?`<br>🎉 解锁了第 <b>${G.level+1}</b> 关！`:G.level===30?`<br>🏆 第30关通关，你太棒了！`:'')+
+    `<br>💾 进度已自动保存`;
   if(stars===3){ SOUND.win(); rainCelebrate(); } else if(stars===2){ SOUND.win(); } else { SOUND.lose(); }
   later(()=>{ el.style.display='flex'; }, stars===3?500:250);
 
