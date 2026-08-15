@@ -1444,6 +1444,12 @@ function gameSample(grade,n,extraRatio,filter){
   for(const c of fresh) out.push(c);
   return out;
 }
+/* 按组词去重（"保护"是"保""护"共同的组词，只保留一个条目） */
+function dedupByWord(chars){
+  const seen=new Set(); const out=[];
+  for(const c of chars){ if(seen.has(c[2])) continue; seen.add(c[2]); out.push(c); }
+  return out;
+}
 /* 生成配对数据：{a:{t,shp,s}, b:{t,shp,s}}，n=对数，extra=超纲比例 */
 function buildPairs(kind, n, extra){
   const g=G.grade;
@@ -1451,10 +1457,11 @@ function buildPairs(kind, n, extra){
     return gameSample(g,n,extra).map(c=>({a:{t:c[0],shp:'circle',s:'big'}, b:{t:c[1],shp:'circle',s:'small'}, id:'m'+c[0]+c[1]}));
   }
   if(kind==='wordgame'){
-    return gameSample(g,n,extra).map(c=>({a:{t:c[0],shp:'circle',s:'big'}, b:{t:c[2],shp:'sq',s:'mid'}, id:'w'+c[0]+c[2]}));
+    /* 同词去重：如"保护"是"保"和"护"的组词，只保留一对，避免重复泡泡 */
+    return dedupByWord(gameSample(g,n,extra)).map(c=>({a:{t:c[0],shp:'circle',s:'big'}, b:{t:c[2],shp:'sq',s:'mid'}, id:'w'+c[0]+c[2]}));
   }
   if(kind==='pinyinv'){
-    return gameSample(g,n,extra,c=>c[2].length===2&&wordPin(c)).map(c=>{
+    return dedupByWord(gameSample(g,n,extra,c=>c[2].length===2&&wordPin(c))).map(c=>{
       const p=wordPin(c);
       return {a:{t:p,shp:'sq',s:'mid'}, b:{t:c[2],shp:'sq',s:'mid'}, id:'p'+p+'|'+c[2]};
     });
